@@ -160,3 +160,106 @@ def info(values: Dict[str, Any], *, version: str, users: int, repeaters: int, si
             "users": users, "repeaters": repeaters, "rules": len(values.get("dmr.repeater_configurations.patterns") or []),
             "obp": len(values.get("dmr.openbridge_connections") or []), "domains": domains, "ports": ports, "size_hint": size_hint,
             "changes": ["Eigenes HTTPS und Let's Encrypt von HBlink4 werden ausgeschaltet – das übernimmt das Portal (nginx)."]}
+
+
+# ---------------------------------------------------------------- Backup-Datei → portalfertig
+def _stored_values(db: Path) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    if not db.is_file():
+        return out
+    with contextlib.closing(sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
+        try:
+            for k, v in conn.execute("SELECT key, value FROM settings"):
+                try:
+                    out[k] = json.loads(v)
+                except (TypeError, ValueError):
+                    out[k] = v
+        except sqlite3.Error:
+            pass
+    return out
+
+
+def _count(db: Path, table: str) -> int:
+    if not db.is_file():
+        return 0
+    with contextlib.closing(sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
+        try:
+            return int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+        except sqlite3.Error:
+            return 0
+
+
+def portalize(source, output, *, identity=None, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Macht aus einer normalen HBlink4-Sicherung (💾 Backup: ``backup-*.tar.gz`` oder AutoBackup ``*.tar.gz.age`` mit
+    ``.agekey``) ein portalfertiges Klon-Archiv – dasselbe, was der Umzugscode liefert: eigenes HTTPS aus, Prüfsummen neu.
+
+    Das Original bleibt unverändert. Gibt die Vorschau (wie ``/api/migration/info``) zurück."""
+    import os
+    import stat
+    import tarfile
+    import tempfile
+    from . import backup as _backup
+    source, output = Path(source), Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="hblink4-portalize-", dir=output.parent) as tmp:
+        tmp = Path(tmp)
+        plain = tmp / "plain.tar.gz"
+        _backup.plain_archive(source, plain, identity)
+        stage = tmp / "stage"
+        stage.mkdir()
+        manifest = _backup.unpack_archive(plain, stage)
+        plain.unlink()
+        db = stage / "data" / "dashboard.db"
+        values = _stored_values(db)
+        ver = manifest.get("version") or {}
+        preview = info(values, version=str(ver.get("version") or ver.get("label") or ""), users=_count(db, "users"), repeaters=0,
+                       size_hint=int(manifest.get("unpacked_bytes") or 0))
+        preview["host"] = ""            # die Sicherung kennt den Rechnernamen nicht – hier liefe sonst der eigene
+        preview["created_at"] = manifest.get("created_at")
+        preview["source"] = "backup"
+        apply_overrides(stage, PORTAL_OVERRIDES if overrides is None else overrides)
+        files, total = {}, 0
+        for name in manifest["files"]:
+            p = stage / name
+            st = p.stat()
+            files[name] = {"size": st.st_size, "sha256": _backup.digest(p), "mode": manifest["files"][name].get("mode", stat.S_IMODE(st.st_mode))}
+            total += st.st_size
+        manifest["files"], manifest["unpacked_bytes"] = files, total
+        manifest["portalized_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        (stage / "manifest.json").write_text(json.dumps(manifest, indent=2))
+        part = output.with_name(output.name + ".part")
+        try:
+            with tarfile.open(part, "w:gz", compresslevel=5) as archive:
+                for name in ["manifest.json", *files]:
+                    archive.add(stage / name, arcname=name, recursive=False)
+            os.chmod(part, 0o600)
+            os.replace(part, output)
+        except Exception:
+            part.unlink(missing_ok=True)
+            raise
+    return preview
+
+
+def main(argv=None) -> int:
+    """``python3 -m dashboard.migration portalize QUELLE ZIEL [--identity SCHLÜSSEL.agekey]`` – für den Portal-Installer."""
+    import argparse
+    import sys
+    from . import backup as _backup
+    ap = argparse.ArgumentParser(prog="python3 -m dashboard.migration")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("portalize", help="normale Sicherung → portalfertiges Klon-Archiv (eigenes HTTPS aus)")
+    p.add_argument("source")
+    p.add_argument("output")
+    p.add_argument("--identity", help="Wiederherstellungsschlüssel (.agekey) für verschlüsselte AutoBackups")
+    a = ap.parse_args(argv)
+    try:
+        preview = portalize(a.source, a.output, identity=a.identity)
+    except _backup.BackupError as e:
+        print(f"Fehler: {e}", file=sys.stderr)
+        return 2
+    print(json.dumps(preview, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

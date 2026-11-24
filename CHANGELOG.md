@@ -4,6 +4,28 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.8.1] – 2026-11-25
+
+**Normale Sicherungen lassen sich jetzt im HobbyRadioPortal wiederherstellen – auch ohne laufenden alten Server.**
+
+Bisher kam HBlink4 nur per Umzugscode ins [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal). Ab Portal 0.10.0 kann
+der Web-Installer auch eine **Backup-Datei** einspielen. Dafür gibt es hier einen neuen Baustein. Ausführlich:
+[docs/de/backup.md](docs/de/backup.md#aus-einer-sicherung-ins-portal-ab-181).
+
+### 📦 `python3 -m dashboard.migration portalize QUELLE ZIEL [--identity SCHLÜSSEL]`
+- Nimmt eine normale Sicherung aus *💾 Backup* (`backup-*.tar.gz`) **oder** ein verschlüsseltes AutoBackup (`auto-*.tar.gz.age`)
+  mit dem Wiederherstellungsschlüssel (`.agekey`).
+- Prüft das Archiv wie jede Wiederherstellung (sichere Pfade, Größen, SHA-256 jeder Datei, `PRAGMA quick_check` der Datenbanken).
+- Schaltet in der **Kopie** das eigene HTTPS aus – Dashboard und alle APRS-Domains –, weil im Portal nginx Port 80/443 übernimmt.
+  Das ist dieselbe Änderung, die das Umzugspaket bekommt (`PORTAL_OVERRIDES`).
+- Bildet Manifest und Prüfsummen neu und schreibt das Ergebnis atomar mit Rechten 600. Das Original bleibt unverändert.
+- Gibt die Vorschau als JSON aus (Version, Titel, Domains, Ports, Benutzer, Datum der Sicherung) – das Portal zeigt sie im Installer.
+- Fehler (falscher Schlüssel, beschädigte oder fremde Datei) enden mit Exit-Code 2 und einer klaren Meldung, ohne Zieldatei.
+
+### 🧪 Tests
+- `tests/test_migration.py`: normale Sicherung → portalfertig (HTTPS aus, Prüfsummen gültig, Original unverändert, Rechte 600);
+  verschlüsseltes AutoBackup nur mit Schlüssel; unbrauchbare Datei → Exit-Code 2 ohne Zieldatei.
+
 ## [1.8.0] – 2026-11-24
 
 **Umzug ins HobbyRadioPortal: Der Web-Installer des Portals holt sich diesen DMR-Server mit einem Umzugscode – komplett und verschlüsselt.**

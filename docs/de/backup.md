@@ -186,6 +186,25 @@ Was anders ist als ein normales Backup:
 Endpunkte (für das Portal, mit `Authorization: Bearer hb4m_…` und `X-Dashboard: 1`): `POST /api/migration/info` (Vorschau, verbraucht
 nichts) und `POST /api/migration/export` (Klon, verschlüsselt, zählt als Abruf).
 
+### Aus einer Sicherung ins Portal (ab 1.8.1)
+
+Läuft der alte Server nicht mehr oder ist er nicht erreichbar, geht es auch mit einer **normalen Sicherung** – ohne Umzugscode:
+
+- Im Web-Installer des Portals (ab 0.10.0) im Schritt **📡 DMR & APRS** *📦 aus einer Backup-Datei* wählen und hochladen:
+  `backup-*.tar.gz` aus *💾 Backup* **oder** ein AutoBackup `auto-*.tar.gz.age` zusammen mit dem Wiederherstellungsschlüssel `.agekey`.
+- Das Portal installiert HBlink4-FreeRadioID und macht die Sicherung vorher **portalfertig** – genau wie beim Umzugscode:
+
+```bash
+cd /opt/HBlink4
+python3 -m dashboard.migration portalize /pfad/backup-….tar.gz /tmp/dmr.tar.gz
+python3 -m dashboard.migration portalize /pfad/auto-….tar.gz.age /tmp/dmr.tar.gz --identity /pfad/HBlink4-Wiederherstellung.agekey
+```
+
+`portalize` entschlüsselt bei Bedarf, prüft das Archiv vollständig (Pfade, Größen, Prüfsummen, Datenbanken), schaltet in der **Kopie**
+das eigene HTTPS aus (Dashboard und APRS-Domains), bildet die Prüfsummen neu, schreibt das Ergebnis mit Rechten 600 und gibt die
+Vorschau als JSON aus (Titel, Domains, Ports, Benutzer). Die Originaldatei bleibt unverändert. Danach spielt
+`scripts/setup_restore.py --yes` das Archiv wie jede Wiederherstellung ein.
+
 ## Zusammenspiel mit Updates (ab 1.6.0)
 
 - Während ein Update läuft, lassen sich kein Backup, kein AutoBackup und keine Wiederherstellung starten – und umgekehrt.

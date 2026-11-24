@@ -134,5 +134,52 @@ class TestMigrationApi(BackupFixture):
         self.assertEqual(self.client.post("/api/migration/info", headers=bearer).status_code, 403)
 
 
+class TestPortalize(BackupFixture):
+    def test_normal_backup_becomes_portal_ready(self):
+        self.auth._db.execute("INSERT OR REPLACE INTO settings(key,value,updated_at,updated_by) VALUES(?,?,?,?)",
+                              ("https.enabled", "true", time.time(), "test"))
+        self.auth._db.execute("INSERT OR REPLACE INTO settings(key,value,updated_at,updated_by) VALUES(?,?,?,?)",
+                              ("https.domain", '"dmr.example.org"', time.time(), "test"))
+        self.create()
+        before = self.archive.read_bytes()
+        out = self.base / "portal" / "dmr.tar.gz"
+        preview = migration.portalize(self.archive, out)
+        self.assertEqual(self.archive.read_bytes(), before)                     # Original unverändert
+        self.assertEqual(preview["source"], "backup")
+        self.assertTrue(preview["https_before"])
+        self.assertEqual(preview["domains"][0]["domain"], "dmr.example.org")
+        self.assertGreaterEqual(preview["users"], 1)
+        dest = self.base / "portalized"
+        dest.mkdir()
+        manifest = backup.unpack_archive(out, dest)                            # Prüfsummen stimmen nach der Änderung
+        self.assertIn("portalized_at", manifest)
+        with contextlib.closing(sqlite3.connect(str(dest / "data/dashboard.db"))) as db:
+            vals = dict(db.execute("SELECT key, value FROM settings").fetchall())
+        self.assertEqual(json.loads(vals["https.enabled"]), False)
+        self.assertEqual(oct(out.stat().st_mode & 0o777), "0o600")
+
+    @unittest.skipUnless(__import__("shutil").which("age"), "age fehlt")
+    def test_encrypted_autobackup_with_key(self):
+        import subprocess
+        self.create()
+        key = self.base / "restore.agekey"
+        subprocess.run(["age-keygen", "-o", str(key)], check=True, capture_output=True)
+        enc = self.base / "auto-x.tar.gz.age"
+        backup.encrypt_archive(self.archive, enc, backup.identity_recipient(key))
+        out = self.base / "dmr.tar.gz"
+        with self.assertRaises(backup.BackupError):
+            migration.portalize(enc, out)                                         # ohne Schlüssel
+        self.assertEqual(migration.main(["portalize", str(enc), str(out), "--identity", str(key)]), 0)
+        dest = self.base / "u"
+        dest.mkdir()
+        self.assertEqual(backup.unpack_archive(out, dest)["format"], backup.FORMAT)
+
+    def test_cli_rejects_garbage(self):
+        junk = self.base / "junk.tar.gz"
+        junk.write_bytes(b"not a backup")
+        self.assertEqual(migration.main(["portalize", str(junk), str(self.base / "x.tar.gz")]), 2)
+        self.assertFalse((self.base / "x.tar.gz").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
