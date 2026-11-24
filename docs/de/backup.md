@@ -157,6 +157,35 @@ Archive unter Python 3.11 und 3.14 und prüfen den Paketaufbau sowie die Install
 in der Zielumgebung ohne Paketindex. Eine produktive Wiederherstellung auf
 einem zweiten Linux-Server muss vor dem ersten Migrationseinsatz zusätzlich erprobt werden.
 
+## Umzug ins HobbyRadioPortal
+
+<p align="center"><img src="../images/admin-umzug.png" alt="Umzug ins HobbyRadioPortal: Umzugscode" width="90%"></p>
+
+Ziehst du HBlink4 auf den Server des [HobbyRadioPortals](https://github.com/dhartmann1979/HobbyRadioPortal) um (dort läuft meist auch
+der FRN-Server), holt sich dessen **Web-Installer** alles selbst – ohne Datei hin und her (ab 1.8.0):
+
+1. Hier als Superadmin **⚙️ Admin → 💾 Backup → 📦 Umzug ins HobbyRadioPortal → ➕ Umzugscode anlegen**. Am besten über HTTPS oder
+   einen SSH-Tunnel (`ssh -L 8080:127.0.0.1:8080 server`), denn der Code wird einmal im Klartext angezeigt.
+2. Code kopieren (`hb4m_…`, 2 Stunden gültig, höchstens 3 Abrufe).
+3. Im Web-Installer des Portals (`http://<neuer Server>/setup`) im Schritt **📡 DMR & APRS** die Adresse dieses Dashboards
+   (z. B. `dmr.die-n8schicht.de:8080`) und den Code eintragen → **🔍 Prüfen** zeigt die Vorschau → *HBlink4 auf diesen Server umziehen*.
+4. Beim Umzug holt das Portal den Klon **verschlüsselt** ab (n8mig: scrypt + SHAKE-256 + HMAC-SHA-256 mit dem Geheimteil des Codes),
+   installiert HBlink4-FreeRadioID unter `/opt/HBlink4` und spielt ihn mit `scripts/setup_restore.py --yes` ein – genau wie eine
+   Wiederherstellung über `setup.sh`, mit Ziel-Backup und Rollback.
+
+Was anders ist als ein normales Backup:
+
+| | |
+|---|---|
+| Eigenes HTTPS | im Klon **aus** (Dashboard und APRS-Domains) – auf dem neuen Server übernimmt nginx des Portals Port 80/443, Domains und Zertifikate |
+| Dieser Server | bleibt **unverändert** und läuft weiter, bis du ihn abschaltest: `sudo systemctl disable --now hblink4 hblink4-dash` |
+| Ports | das Portal öffnet sie bei aktivem ufw selbst (DMR-UDP, OpenBridge, APRS-IS) – sonst im Router/der Firewall freigeben |
+| DNS | Domains (z. B. `dmr.…`, `aprs.…`) auf den neuen Server umstellen – Repeater mit Hostnamen kommen dann von selbst |
+| Codes | Liste mit Abrufen und letzter IP; **Widerrufen** sperrt einen Code sofort; Fehlversuche sperren eine Adresse 15 Minuten |
+
+Endpunkte (für das Portal, mit `Authorization: Bearer hb4m_…` und `X-Dashboard: 1`): `POST /api/migration/info` (Vorschau, verbraucht
+nichts) und `POST /api/migration/export` (Klon, verschlüsselt, zählt als Abruf).
+
 ## Zusammenspiel mit Updates (ab 1.6.0)
 
 - Während ein Update läuft, lassen sich kein Backup, kein AutoBackup und keine Wiederherstellung starten – und umgekehrt.

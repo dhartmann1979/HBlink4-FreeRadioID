@@ -3307,7 +3307,7 @@
         // ---- Umzug ins HobbyRadioPortal: Einmal-Code, mit dem der Web-Installer des Portals alles abholt
         function migrationHtml(m, busy) {
             const i = m.info || {}, active = (m.codes || []).filter(c => c.state === 'active');
-            const when = t => new Date(t * 1000).toLocaleString();
+            const when = t => new Date(t * 1000).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'de-DE', { dateStyle: 'short', timeStyle: 'short' });
             const st = { active: 'gültig', used: 'aufgebraucht', expired: 'abgelaufen', revoked: 'widerrufen' };
             return `<div class="ap-card mig-card"><h3>📦 Umzug ins HobbyRadioPortal</h3>
                 <p>Ziehst du HBlink4 auf den Server des <b>HobbyRadioPortals</b> um, holt sich dessen Web-Installer alles selbst:
@@ -3331,9 +3331,9 @@
             try {
                 const c = await api('POST', '/api/admin/migration/code', {});
                 const box = document.getElementById('migCode');
-                box.innerHTML = `<div class="mig-new"><p>🔑 <b>Umzugscode</b> – jetzt kopieren, er wird nur einmal angezeigt (gültig bis ${escapeHtml(new Date(c.expires_at * 1000).toLocaleString())}):</p>
+                box.innerHTML = `<div class="mig-new"><p>🔑 <b>Umzugscode</b> – jetzt kopieren, er wird nur einmal angezeigt (gültig bis ${escapeHtml(new Date(c.expires_at * 1000).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'de-DE', { dateStyle: 'short', timeStyle: 'short' }))}):</p>
                     <code class="mig-secret">${escapeHtml(c.code)}</code> <button class="btn-s" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(() => toast('Kopiert', 'ok'))">📋 Kopieren</button>
-                    <p>Im Web-Installer des Portals unter <b>DMR übernehmen</b>: Adresse dieses Dashboards (${escapeHtml(location.origin)}) und diesen Code eintragen.</p></div>`;
+                    <p>Im Web-Installer des Portals (<code>/setup</code>) im Schritt <b>📡 DMR &amp; APRS</b>: Adresse dieses Dashboards (${escapeHtml(location.origin)}) und diesen Code eintragen.</p></div>`;
             } catch (e) { toast(e.message, 'err'); } finally { btn.disabled = false; }
         }
         async function revokeMigrationCode(id) {

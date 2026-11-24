@@ -4,6 +4,48 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.8.0] – 2026-11-24
+
+**Umzug ins HobbyRadioPortal: Der Web-Installer des Portals holt sich diesen DMR-Server mit einem Umzugscode – komplett und verschlüsselt.**
+
+Ziehst du HBlink4 auf den Server des [HobbyRadioPortals](https://github.com/dhartmann1979/HobbyRadioPortal) (ab 0.9.0) um, musst du
+kein Backup mehr herunterladen und hochladen. Ausführlich: [docs/de/backup.md](docs/de/backup.md#umzug-ins-hobbyradioportal) und die
+[Umzugsanleitung des Portals](https://github.com/dhartmann1979/HobbyRadioPortal/blob/main/docs/UMZUG.md).
+
+### 📦 Admin → 💾 Backup → Umzug ins HobbyRadioPortal
+- Neue Karte im Backup-Bereich (nur Superadmin): was mitkommt (Version, Benutzer, Repeater-Regeln, OpenBridge, APRS), welche Domains
+  das Portal neu einrichtet und welche **Ports** der neue Server braucht (DMR, OpenBridge, APRS-IS).
+- **➕ Umzugscode anlegen**: `hb4m_…`, wird **einmal** angezeigt (mit 📋 Kopieren), gilt **2 Stunden** und für höchstens **3 Abrufe**;
+  gespeichert wird nur der SHA-256 des Geheimteils. Liste der Codes mit Zustand, Abrufen und letzter IP, **Widerrufen**.
+- Über HTTP verbunden? Ein roter Hinweis rät zu HTTPS oder einem SSH-Tunnel, bevor der Code angezeigt wird.
+- Protokoll: *Umzugscode angelegt/widerrufen*, *Umzugspaket geliefert* (mit Größe und IP).
+
+### 🔐 Wie das Portal den Server holt
+- `POST /api/migration/info` (Bearer = Umzugscode): Vorschau – Version, Titel, Zahlen, Domains, Ports. Verbraucht keinen Abruf.
+- `POST /api/migration/export` (Bearer = Umzugscode): erstellt den **Klon** wie unter 💾 Backup (Programm, Konfiguration, Benutzer,
+  Zugangsdaten, Datenbanken, APRS, eigene Dateien, Paketversionen, Repository) und liefert ihn **verschlüsselt** aus.
+- Verschlüsselung `n8mig` (nur Standardbibliothek, auch ohne HTTPS sicher): Schlüssel aus dem Geheimteil des Codes per **scrypt**,
+  SHAKE-256-Schlüsselstrom und **HMAC-SHA-256** über alles (encrypt-then-MAC). Ohne passenden Code oder bei der kleinsten Änderung
+  verwirft das Portal das Paket. `dashboard/n8mig.py` ist im Portal identisch (`portal/n8mig.py`, per Test geprüft).
+- Das Paket ist **portalfertig**: im Klon sind das eigene HTTPS von HBlink4 und das Let's Encrypt der APRS-Domains ausgeschaltet –
+  auf dem neuen Server übernimmt nginx des Portals Port 80/443 und leitet die Domains an das Dashboard weiter. Die Prüfsummen werden
+  erst danach gebildet, die Wiederherstellung prüft das Archiv also vollständig wie jedes Backup. **Der alte Server bleibt unverändert.**
+- Zu viele falsche Codes von einer Adresse sperren sie 15 Minuten. Bei privatem Dashboard brauchen nur diese beiden Endpunkte keine
+  Sitzung (sie prüfen den Code selbst); CSRF (`X-Dashboard`) gilt auch für sie.
+- Kein Zwischenstand bleibt liegen: unverschlüsseltes und verschlüsseltes Paket werden nach dem Senden gelöscht.
+
+### 🛠️ Wiederherstellen ohne Rückfragen
+- `scripts/setup_restore.py VERZEICHNIS BACKUP.tar.gz --yes [--account BENUTZER]`: für den Root-Helfer des Portals. Die Vorschau wird
+  angezeigt, die Bestätigung *RESTORE* gilt als gegeben, der Dienst-Benutzer kommt aus dem alten Server. Sonst alles wie bisher
+  (Ziel-Backup vorher, Rollback bei Fehlern, Paketprüfung mit der Python-Version des Ziels).
+- `create_archive(…, stage_hook=…)`: Klon-Kopie vor den Prüfsummen ändern (nutzt der Umzug).
+
+### 🧪 Tests
+- `tests/test_migration.py`: Ver- und Entschlüsselung (mehrere Blöcke, falscher Code, verändertes Byte → nichts bleibt liegen),
+  Codes (Abrufe, Ablauf, Widerruf, Sperre nach Fehlversuchen, falsches Präfix), Vorschau mit Domains und Ports, der ganze Weg über
+  die API bis zum entschlüsselten Klon, den `unpack_archive` vollständig prüft – mit HTTPS aus im Klon und unverändertem alten Server.
+- Zusätzlich gegen das echte Portal geprüft: Portal prüft Adresse und Code, holt 147 MB in 7 s, entschlüsselt und übergibt.
+
 ## [1.7.0] – 2026-11-24
 
 **Portal-Zugang: API-Token für das HobbyRadioPortal – APRS und DAPRS lassen sich jetzt dort verwalten.**
