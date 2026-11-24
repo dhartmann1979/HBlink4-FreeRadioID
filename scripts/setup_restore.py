@@ -266,9 +266,33 @@ b['atomic_json'](folder / 'restore-request.json', {'token':token,'sha256':sha,'i
 
 
 def main():
-    if len(sys.argv) != 3:
-        raise SetupError("Aufruf: sudo python3 scripts/setup_restore.py INSTALLATIONSVERZEICHNIS BACKUP.tar.gz")
-    SetupRestore(sys.argv[1], sys.argv[2]).execute()
+    """sudo python3 scripts/setup_restore.py INSTALLATIONSVERZEICHNIS BACKUP.tar.gz [--yes] [--account NAME]
+
+    --yes:     ohne Rückfragen (Umzug durch den Web-Installer des HobbyRadioPortals): Vorschau wird nur angezeigt,
+               die Bestätigung „RESTORE“ gilt als gegeben. Verschlüsselte AutoBackups (.age) gehen so nicht.
+    --account: Dienst-Benutzer auf dem neuen Server (Vorgabe: Eigentümer des Verzeichnisses bzw. „hblink“)."""
+    args = sys.argv[1:]
+    yes = "--yes" in args
+    account = None
+    if "--account" in args:
+        i = args.index("--account")
+        account = args[i + 1] if i + 1 < len(args) else ""
+        args = args[:i] + args[i + 2:]
+    args = [a for a in args if a != "--yes"]
+    if len(args) != 2:
+        raise SetupError("Aufruf: sudo python3 scripts/setup_restore.py INSTALLATIONSVERZEICHNIS BACKUP.tar.gz [--yes] [--account NAME]")
+    ask = input
+    if yes:
+        def ask(prompt):
+            print(prompt, end="")
+            if "RESTORE" in prompt:
+                print("RESTORE")
+                return "RESTORE"
+            if "Dienst-Benutzer" in prompt:
+                print(account or "")
+                return account or ""
+            raise SetupError("Rückfrage ohne Antwort im Modus --yes: " + prompt.strip())
+    SetupRestore(args[0], args[1], ask=ask).execute()
 
 
 if __name__ == "__main__":

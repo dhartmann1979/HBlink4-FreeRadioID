@@ -185,7 +185,7 @@ def copy_tree(source, dest, skip=()):
     walk(source, dest, set())
 
 
-def create_archive(root, data_dir, output, *, version=None, system_units=None, python=None):
+def create_archive(root, data_dir, output, *, version=None, system_units=None, python=None, stage_hook=None):
     root, data_dir, output = Path(root).resolve(), Path(data_dir).resolve(), Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="hblink4-snapshot-", dir=output.parent) as tmp:
@@ -222,6 +222,8 @@ def create_archive(root, data_dir, output, *, version=None, system_units=None, p
                 tls[key] = str(data_dir / "backup-tls" / (key + ".pem"))
         if cfg_path.exists():
             cfg_path.write_text(json.dumps(cfg, indent=2) + "\n")
+        if stage_hook:
+            stage_hook(stage)   # e.g. the migration package: change the COPY before checksums are taken
         meta = stage / "metadata"
         meta.mkdir()
         (meta / "services.json").write_text(json.dumps(system_units or {}, indent=2))

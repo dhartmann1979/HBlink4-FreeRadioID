@@ -45,6 +45,8 @@ from . import n8_security as _sec
 from . import n8_update_guard as _guard
 from . import backup as _backup
 from . import autobackup as _autobackup
+from . import migration as _migration
+from . import n8mig as _n8mig
 from .aprs.service import AprsService
 from .aprs.store import public as _aprs_public
 from .aprs.packet import passcode as _aprs_passcode, valid_call as _aprs_valid_call
@@ -1320,6 +1322,7 @@ async def _security_middleware(request: Request, call_next):
             return JSONResponse({"error": "Missing X-Dashboard header."}, status_code=403)
         # Private dashboard: everything but login and branding needs a session.
         if (not _public_dashboard() and not path.startswith("/api/auth/") and path != "/api/config"
+                and not path.startswith("/api/migration/")
                 and not (path.startswith("/api/aprs/") and state.aprs.c("aprs.map.public", True))
                 and not current_user(request)):
             return JSONResponse({"error": "Please log in."}, status_code=401)
@@ -2026,6 +2029,101 @@ async def admin_backup_inspect(request: Request):
             raise
         state.auth.audit("backup_checked", actor["username"], token, _client_ip(request))
         return {"ok": True, "token": token, "sha256": sha, "backup": _backup.summary(manifest)}
+
+
+# ---------------------------------------------------------------- Umzug ins HobbyRadioPortal
+# Superadmin legt einen Umzugscode an; der Web-Installer des Portals holt damit Vorschau und Klon (verschlüsselt).
+def _migration_codes() -> "_migration.Codes":
+    return _migration.Codes(_backup_dir())
+
+
+def _migration_values() -> dict:
+    try:
+        return state.settings.db.stored()
+    except Exception:
+        return {}
+
+
+def _migration_info() -> dict:
+    v = _version.local_version() or {}
+    try:
+        users = len(state.auth.list_users())
+    except Exception:
+        users = 0
+    reps = len(getattr(state, "repeaters", {}) or {})   # gerade verbunden
+    return _migration.info(_migration_values(), version=v.get("version") or v.get("label") or "", users=users, repeaters=reps)
+
+
+def _migration_code(request: Request) -> str:
+    auth = request.headers.get("authorization", "")
+    if not auth.lower().startswith("bearer "):
+        raise _HTTPError(401, "Umzugscode fehlt.")
+    return auth[7:].strip()
+
+
+@app.get("/api/admin/migration")
+async def admin_migration(request: Request):
+    _require_backup_owner(request)
+    return {"codes": _migration_codes().list(), "info": _migration_info(), "https": request.url.scheme == "https",
+            "ttl_hours": _migration.TTL // 3600, "max_uses": _migration.MAX_USES}
+
+
+@app.post("/api/admin/migration/code")
+async def admin_migration_code(request: Request):
+    actor = _require_backup_owner(request)
+    c = _migration_codes().create(actor["username"])
+    state.auth.audit("migration_code_created", actor["username"], c["id"], _client_ip(request))
+    return c
+
+
+@app.delete("/api/admin/migration/code/{cid}")
+async def admin_migration_revoke(cid: str, request: Request):
+    actor = _require_backup_owner(request)
+    if not re.fullmatch(r"[0-9a-f]{8}", cid) or not _migration_codes().revoke(cid):
+        raise _HTTPError(404, "Umzugscode nicht gefunden.")
+    state.auth.audit("migration_code_revoked", actor["username"], cid, _client_ip(request))
+    return {"ok": True}
+
+
+@app.post("/api/migration/info")
+async def migration_info(request: Request):
+    try:
+        _migration_codes().check(_migration_code(request), _client_ip(request))
+    except _n8mig.MigrationError as e:
+        raise _HTTPError(403, str(e))
+    return _migration_info()
+
+
+@app.post("/api/migration/export")
+async def migration_export(request: Request):
+    from starlette.background import BackgroundTask
+    ip = _client_ip(request)
+    try:
+        c = _migration_codes().check(_migration_code(request), ip, use=True)
+    except _n8mig.MigrationError as e:
+        raise _HTTPError(403, str(e))
+    _backup_idle()
+    folder = _backup_dir()
+    plain = folder / f"migration-{c['id']}-{int(time.time())}.tar.gz"
+    packed = plain.with_suffix(".n8mig")
+    async with _backup_lock:
+        try:
+            state.save_all_data()
+            await asyncio.to_thread(state.aprs.store.flush)
+            units = await asyncio.to_thread(_backup.collect_units)
+            await asyncio.to_thread(_backup.create_archive, _version.REPO_ROOT, state._data_dir, plain,
+                                    version=_version.local_version(), system_units=units,
+                                    stage_hook=lambda st: _migration.apply_overrides(st, _migration.PORTAL_OVERRIDES))
+            await asyncio.to_thread(_n8mig.encrypt_file, plain, packed, c["secret"])
+        except Exception:
+            packed.unlink(missing_ok=True)
+            raise
+        finally:
+            plain.unlink(missing_ok=True)
+    state.auth.audit("migration_exported", f"Umzugscode {c['id']}", f"{packed.stat().st_size // 1024} KB", ip)
+    logger.info(f"📦 Umzugspaket an {ip} geliefert ({packed.stat().st_size // 1024} KB, Code {c['id']})")
+    return FileResponse(packed, media_type="application/octet-stream", filename="hblink4-umzug.n8mig",
+                        headers={"Cache-Control": "no-store"}, background=BackgroundTask(packed.unlink, missing_ok=True))
 
 
 @app.post("/api/admin/backup/recovery-key")
