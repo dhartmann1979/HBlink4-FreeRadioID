@@ -1655,6 +1655,14 @@
 
         /* Admin window: always the same size, content scrolls inside */
         .modal-content.admin { height: min(880px, calc(100vh - 32px)); }
+        /* Adminbereich als Seite über die ganze Breite (wie N8 Crosslink): unter der Kopfzeile statt als Fenster */
+        body.admin-open .container > .tab-pane, body.admin-open .container > .links-bar { display: none !important; }
+        .modal-overlay.admin-dock { position: static !important; inset: auto; background: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+            padding: 0 !important; display: block !important; z-index: auto; animation: none; }
+        .admin-dock .modal-content.admin { width: auto !important; max-width: none !important; height: auto !important; max-height: none !important; margin: 0 !important;
+            padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; overflow: visible !important; animation: none; }
+        .admin-dock .admin-head { display: none; }
+        .admin-dock .modal-content.admin .admin-body { overflow: visible; }
         .modal-content.admin .admin-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
         @media (max-width: 600px) { .modal-content.admin { height: calc(100vh - 20px); max-height: none; } }
         .tab-intro { padding: 2px 4px 10px; }
@@ -3257,6 +3265,8 @@
         };
 
         function openAdmin(tab = 'users') {
+            const open = document.getElementById('adminModal');
+            if (open) { adminTab(tab); return; }
             const m = openModal(`
                 <div class="admin-head">
                     <h2>⚙️ Admin area</h2>
@@ -3264,8 +3274,16 @@
                 </div>
                 <div class="hb-admin"><nav id="adminNav" aria-label="Admin"></nav><div class="admin-body" id="adminBody"></div></div>`, 'admin');
             m.id = 'adminModal';
+            // Wie in N8 Crosslink (und allen N8-Systemen): der Adminbereich ist eine Seite unter der Kopfzeile über die ganze
+            // Browser-Breite – kein schwebendes Fenster mehr. „Admin“ in der Menüleiste ist dabei hervorgehoben.
+            m.classList.add('admin-dock');
+            document.querySelector('body > .container').appendChild(m);
+            document.body.classList.add('admin-open');
+            showTab(currentTab(), false);     // markiert „Admin“ und blendet die Seiten aus
+            window.scrollTo(0, 0);
             // unsaved appearance changes are only a preview: closing restores the saved look
-            const close = m._close; m._close = () => { close(); loadConfig(); };
+            const close = m._close;
+            m._close = () => { close(); document.body.classList.remove('admin-open'); showTab(currentTab(), false); loadConfig(); };
             adminTab(tab);
         }
 
@@ -7105,9 +7123,10 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (tab === 'config' && !cfAllowed()) tab = 'live';
             if (tab === 'obp' && !obpList().length) tab = 'live';
             if (tab === 'aprs' && !aprsAllowed()) tab = 'live';
+            const adm = !!document.getElementById('adminModal');     // Adminbereich offen: „Admin“ bleibt hervorgehoben
             document.querySelectorAll('#mainTabs button').forEach(b => {
-                b.classList.toggle('active', b.dataset.tab === tab);
-                b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false');
+                b.classList.toggle('active', adm ? b.id === 'mainTabAdmin' : b.dataset.tab === tab);
+                b.setAttribute('aria-selected', !adm && b.dataset.tab === tab ? 'true' : 'false');
             });
             document.getElementById('tabLive').style.display = tab === 'live' ? '' : 'none';
             document.getElementById('tabStats').style.display = tab === 'stats' ? '' : 'none';
@@ -7127,7 +7146,8 @@ PROTO_VER: ${fd ? 5 : 1}`;
             else tgsHide();
         }
         document.getElementById('mainTabs').addEventListener('click', ev => {
-            const b = ev.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab, true);
+            const b = ev.target.closest('button[data-tab]');
+            if (b) { const am = document.getElementById('adminModal'); if (am) am._close(); showTab(b.dataset.tab, true); }
         });
         window.addEventListener('hashchange', () => showTab(currentTab(), false));
 

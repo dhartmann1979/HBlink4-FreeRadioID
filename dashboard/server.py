@@ -42,7 +42,7 @@ from .talkgroups import Talkgroups
 from . import version as _version
 from . import siteicons as _siteicons
 from . import n8_security as _sec
-from .n8_admin import N8Admin as _N8Admin
+from .n8_admin import N8Admin as _N8Admin, own_unit
 from . import backup as _backup
 from . import autobackup as _autobackup
 from .aprs.service import AprsService
@@ -1543,7 +1543,7 @@ async def admin_service_action(unit: str, action: str, request: Request):
     state.auth.audit("service", actor["username"], f"{action} {unit}: {'ok' if ok else out[:120]}", _client_ip(request))
     if not ok:
         raise _HTTPError(400, out or "failed")
-    return {"ok": True, "message": out, "units": await _n8().units()}
+    return {"ok": True, "message": out, "units": await _n8().units(), "self": action in ("restart", "stop") and unit == own_unit()}
 
 
 @app.get("/api/admin/perms")

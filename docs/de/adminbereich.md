@@ -39,7 +39,7 @@ Im Adminbereich stellst du **Dashboard und DMR-Server** ein, ohne SSH und ohne C
 
 <p align="center"><img src="../images/admin-keepalive.png" alt="Adminbereich mit Baum-Menü" width="95%"></p>
 
-Seit **1.13.0** steht links im Admin-Fenster ein **Baum-Menü** – dasselbe wie im HobbyRadioPortal, ADN-FRN-Server, N8 Hotspot
+Seit **1.14.1** ist der Adminbereich kein schwebendes Fenster mehr, sondern – wie in N8 Crosslink und allen N8-Systemen – eine **Seite unter der Kopfzeile über die ganze Browser-Breite**; **⚙️ Admin** in der Menüleiste ist dabei hervorgehoben, ein Klick auf einen anderen Menüpunkt (oder Esc) verlässt ihn. Seit **1.13.0** steht links ein **Baum-Menü** – dasselbe wie im HobbyRadioPortal, ADN-FRN-Server, N8 Hotspot
 und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 
 | Gruppe | Einträge |
@@ -50,7 +50,7 @@ und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 | 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💥 Abstürze · 💾 Backup |
 
 Alle Gruppen sind **anfangs zugeklappt** – offen ist nur die Gruppe der gerade gewählten Seite; ein Klick auf eine Gruppe klappt sie auf (gemerkt bis zum Schließen des Browser-Tabs). Am Smartphone steht das Menü über dem Inhalt als aufklappbare
-Leiste „☰ *aktueller Bereich*“. Das Fenster ist immer gleich groß, nur der Inhalt rollt; Kacheln einer Reihe sind gleich hoch.
+Leiste „☰ *aktueller Bereich*“. Kacheln einer Reihe sind gleich hoch.
 
 ## 💾 Backup
 
@@ -130,7 +130,7 @@ OpenBridge-Trunks haben einen eigenen Bereich: [↔️ OpenBridge](#️-openbrid
 &nbsp;
 <img src="../images/admin-appearance-mobile.png" alt="Appearance am Smartphone" width="22%"></p>
 
-Rechts zeigt eine **Vorschau** Browser-Tab und Kopfzeile. Gleichzeitig ändert sich das ganze Dashboard hinter dem Fenster sofort mit. Was du nicht speicherst, verschwindet beim Schließen des Fensters wieder.
+Rechts zeigt eine **Vorschau** Browser-Tab und Kopfzeile. Gleichzeitig ändert sich das ganze Dashboard sofort mit. Was du nicht speicherst, verschwindet beim Verlassen des Adminbereichs wieder.
 
 | Bereich | Einstellungen |
 |---|---|
