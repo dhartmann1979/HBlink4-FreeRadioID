@@ -4,6 +4,27 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.9.0] – 2026-11-25
+
+**`setup.sh` ohne Rückfragen: `HB4_ANSWERS=/pfad/answers.json`.** Damit kann der Web-Installer des
+[HobbyRadioPortals](https://github.com/dhartmann1979/HobbyRadioPortal) (ab 0.11.0) HBlink4 nicht nur umziehen oder aus einem Backup
+holen, sondern auch **frisch installieren** (*DMR & APRS → ✨ HBlink4 neu installieren*). Ausführlich:
+[docs/de/installation.md](docs/de/installation.md#ohne-rückfragen-hb4_answers).
+
+### ⌨️ `HB4_ANSWERS`
+- Die Antworten kommen aus einer JSON-Datei statt aus der Konsole: `server_name`, `dmr_port`, `ts1`, `ts2`, `frid`, `passphrase`,
+  `guest_tgs`, `dashboard_title`, `server_description`, `web_port`, `public`, `admin_user`, `admin_password`, `https`, `domain`, `email`,
+  `aprs`, `aprs_id`, `aprs_domains`, `aprs_ports`, `aprs_uplink`, `aprs_cb_login`, `svc_user`.
+- Fehlende Schlüssel nehmen die Vorgabe bzw. den aktuellen Wert einer bestehenden Installation – derselbe Weg wie Enter bei einer Frage.
+- `admin_password` (mindestens 8 Zeichen) wird sofort zum scrypt-Hash; ohne Passwort bricht eine Neuinstallation ab.
+- Ohne Backup-Frage, ohne „So einrichten?“; alles Weitere (Konfiguration schreiben, Firewall, Dienste, `check.sh`) wie gewohnt.
+- Alle Fragen-Helfer (`ask`, `ask_yn`) nehmen in diesem Modus die Vorgabe – nichts wartet mehr auf eine Eingabe.
+
+### 🧪 Geprüft
+- Echter Lauf auf einem frischen Klon (`SKIP_APT=1 SKIP_SERVICES=1 SKIP_FIREWALL=1 HB4_ANSWERS=…`): alle 10 Schritte ohne Eingabe,
+  Einstellungen (Server, Titel, FreeRadioID, APRS mit ID und Domain) in der Datenbank, Superadmin-Passwort prüfbar.
+- `tests/test_setup_unattended.py`: `setup.sh` kennt `HB4_ANSWERS`, ist syntaktisch in Ordnung und fragt im Modus nichts.
+
 ## [1.8.1] – 2026-11-25
 
 **Normale Sicherungen lassen sich jetzt im HobbyRadioPortal wiederherstellen – auch ohne laufenden alten Server.**

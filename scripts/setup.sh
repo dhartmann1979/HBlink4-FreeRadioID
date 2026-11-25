@@ -13,6 +13,12 @@
 #
 #  Umgebungsvariablen: SKIP_APT=1 (keine Pakete installieren),
 #  SKIP_SERVICES=1 (keine systemd-Dienste), SKIP_FIREWALL=1.
+#
+#  Ohne Rückfragen neu einrichten (z. B. Web-Installer des HobbyRadioPortals):
+#    HB4_ANSWERS=/pfad/answers.json   Antworten als JSON (600), fehlende Werte = Vorgaben. Schlüssel:
+#      svc_user, server_name, dmr_port, ts1, ts2, frid, passphrase, guest_tgs, dashboard_title, server_description,
+#      web_port, public, admin_user, admin_password (min. 8), https, domain, email,
+#      aprs, aprs_id, aprs_domains, aprs_ports, aprs_uplink (0–3), aprs_cb_login
 # =============================================================================
 set -u
 
@@ -36,13 +42,16 @@ ok()    { echo -e "   ${G}✓${N} $*"; }
 warn()  { echo -e "   ${Y}!${N} $*"; }
 fail()  { echo -e "   ${R}✗ $*${N}"; exit 1; }
 
+UNATTENDED=0; [ -n "${HB4_ANSWERS:-}" ] && UNATTENDED=1
 ask() {        # ask VAR "Frage" "Vorgabe"
     local __v="$1" __q="$2" __d="${3-}" __a=""
+    if [ "$UNATTENDED" = 1 ]; then printf -v "$__v" '%s' "$__d"; return; fi
     read -r -p "$(echo -e "   ${B}?${N} $__q ${D}[$__d]${N}: ")" __a
     printf -v "$__v" '%s' "${__a:-$__d}"
 }
 ask_yn() {     # ask_yn VAR "Frage" j|n
     local __v="$1" __q="$2" __d="$3" __a="" __hint
+    if [ "$UNATTENDED" = 1 ]; then [ "$__d" = j ] && printf -v "$__v" true || printf -v "$__v" false; return; fi
     [ "$__d" = j ] && __hint="J/n" || __hint="j/N"
     while true; do
         read -r -p "$(echo -e "   ${B}?${N} $__q ${D}[$__hint]${N}: ")" __a
@@ -70,6 +79,10 @@ info "Installationsverzeichnis: $REPO_ROOT"
 echo -e "   ${B}Einrichtungsart${N}"
 info "Neu einrichten: Einstellungen Schritt für Schritt eingeben."
 info "Backup wiederherstellen: Programm, Einstellungen und Benutzer aus einer Sicherung übernehmen."
+if [ "$UNATTENDED" = 1 ]; then
+    [ -f "$HB4_ANSWERS" ] || fail "HB4_ANSWERS nicht gefunden: $HB4_ANSWERS"
+    info "Ohne Rückfragen mit den Antworten aus $(basename "$HB4_ANSWERS")"
+fi
 ask_yn RESTORE_SETUP "Vorhandenes HBlink4-Backup wiederherstellen?" n
 BACKUP_FILE=""
 if [ "$RESTORE_SETUP" = true ]; then
@@ -103,6 +116,7 @@ fi
 step "Dienst-Benutzer"
 info "HBlink4 und das Dashboard laufen als normaler Benutzer, nicht als root."
 DEF_USER="$(stat -c %U "$REPO_ROOT")"; [ "$DEF_USER" = root ] && DEF_USER="hblink"
+[ "$UNATTENDED" = 1 ] && DEF_USER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("svc_user") or sys.argv[2])' "$HB4_ANSWERS" "$DEF_USER")"
 ask SVC_USER "Benutzer für die Dienste" "$DEF_USER"
 if ! id "$SVC_USER" >/dev/null 2>&1; then
     useradd --system --create-home --shell /usr/sbin/nologin "$SVC_USER" && ok "Benutzer $SVC_USER angelegt"
@@ -123,6 +137,47 @@ fi
 CUR="$(venv/bin/python scripts/setup_apply.py current "$REPO_ROOT" 2>/dev/null)" || fail "aktuelle Werte nicht lesbar"
 cur() { echo "$CUR" | jget "$1"; }
 
+if [ "$UNATTENDED" = 1 ]; then
+# ---------------------------------------------------------------------- 4–9 aus HB4_ANSWERS
+step "DMR-Server"; step "Zugang für Repeater & Hotspots"; step "Dashboard & Superadmin"; step "HTTPS"; step "APRS"; step "Zusammenfassung"
+eval "$(CUR_JSON="$CUR" python3 - "$HB4_ANSWERS" <<'PY'
+import json, os, shlex, sys
+cur = json.loads(os.environ["CUR_JSON"] or "{}")
+a = json.load(open(sys.argv[1]))
+m = {"SERVER_NAME": "server_name", "DMR_PORT": "dmr_port", "TS1": "ts1", "TS2": "ts2", "FRID": "frid", "PASSPHRASE": "passphrase",
+     "GUEST_TGS": "guest_tgs", "TITLE": "dashboard_title", "DESCRIPTION": "server_description", "WEB_PORT": "web_port", "PUBLIC": "public",
+     "ADMIN_USER": "admin_user", "HTTPS": "https", "DOMAIN": "domain", "EMAIL": "email", "APRS": "aprs", "APRS_ID": "aprs_id",
+     "APRS_DOMAINS": "aprs_domains", "APRS_PORTS": "aprs_ports", "APRS_UPLINK": "aprs_uplink", "APRS_CB_LOGIN": "aprs_cb_login"}
+for var, key in m.items():
+    v = a.get(key, cur.get(key, ""))
+    if isinstance(v, bool):
+        v = "true" if v else "false"
+    elif isinstance(v, list):
+        v = ", ".join(str(x) for x in v)
+    elif v is None:
+        v = ""
+    print(f"{var}={shlex.quote(str(v))}")
+pw = str(a.get("admin_password") or "")
+print(f"ADMIN_PW={shlex.quote(pw)}")
+PY
+)" || fail "HB4_ANSWERS ist kein gültiges JSON"
+[ "$APRS" = true ] || APRS_PORTS=false
+[ -n "$APRS_ID" ] || APRS_UPLINK=0
+[ -n "$DOMAIN" ] || DOMAIN="$SERVER_NAME"
+if [ -n "$ADMIN_PW" ]; then
+    [ ${#ADMIN_PW} -ge 8 ] || fail "admin_password: mindestens 8 Zeichen"
+elif [ "$(cur admin_has_password)" != true ]; then
+    fail "admin_password fehlt (Superadmin ohne Passwort)"
+fi
+ADMIN_HASH=""
+[ -n "$ADMIN_PW" ] && ADMIN_HASH="$(printf '%s' "$ADMIN_PW" | venv/bin/python scripts/setup_apply.py hash)"
+unset ADMIN_PW
+if [ "$HTTPS" = true ] && [ "${SKIP_APT:-0}" != 1 ] && ! command -v certbot >/dev/null 2>&1; then
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq certbot >/dev/null 2>&1 || warn "certbot konnte nicht installiert werden"
+fi
+ok "Server $SERVER_NAME · DMR UDP $DMR_PORT · Superadmin $ADMIN_USER · HTTPS $HTTPS · APRS $APRS"
+GO=true
+else
 # ---------------------------------------------------------------------- 4
 step "DMR-Server"
 info "Repeater und Hotspots verbinden sich per HomeBrew-Protokoll (UDP)."
@@ -227,6 +282,7 @@ row "APRS               " "$AP_TXT"
 row "Dienst-Benutzer    " "$SVC_USER"
 ask_yn GO "So einrichten?" j
 [ "$GO" = true ] || { warn "Abgebrochen, nichts geändert."; exit 0; }
+fi   # Fragen oder HB4_ANSWERS
 
 STAMP="$(date +%Y%m%d-%H%M%S)"
 for f in config/config.json dashboard/config.json; do

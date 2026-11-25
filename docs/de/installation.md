@@ -100,6 +100,28 @@ Optionen per Umgebungsvariable:
 | `SKIP_APT=1` | keine Systempakete installieren |
 | `SKIP_SERVICES=1` | keine systemd-Dienste einrichten (dann `run_all.sh` zum Testen) |
 | `SKIP_FIREWALL=1` | Firewall nicht anfassen |
+| `HB4_ANSWERS=/pfad/answers.json` | **ohne Rückfragen neu einrichten** (ab 1.9.0) – Antworten als JSON, siehe unten |
+
+### Ohne Rückfragen (`HB4_ANSWERS`)
+
+So richtet z. B. der Web-Installer des [HobbyRadioPortals](https://github.com/dhartmann1979/HobbyRadioPortal) (ab 0.11.0,
+*DMR & APRS → ✨ HBlink4 neu installieren*) einen DMR-Server ein. Alle Schlüssel sind optional – was fehlt, nimmt die Vorgabe
+(bzw. den aktuellen Wert); nur `admin_password` braucht eine Neuinstallation:
+
+```bash
+cat > /root/hb4.json <<'JSON'
+{"server_name": "dmr.example.org", "dmr_port": 62031, "frid": true, "passphrase": "Gast-Passwort", "guest_tgs": "9, 262",
+ "dashboard_title": "DMR Die N8schicht", "server_description": "", "web_port": 8080, "public": true,
+ "admin_user": "sysop", "admin_password": "mindestens-8-Zeichen", "https": false,
+ "aprs": true, "aprs_id": "DB0ABC-10", "aprs_domains": "aprs.example.org", "aprs_ports": true, "aprs_uplink": 1}
+JSON
+chmod 600 /root/hb4.json
+sudo HB4_ANSWERS=/root/hb4.json ./scripts/setup.sh
+rm /root/hb4.json
+```
+
+Weitere Schlüssel: `svc_user` (Dienst-Benutzer, Vorgabe `hblink`), `ts1`, `ts2`, `domain`, `email`, `aprs_cb_login`. Das Passwort wird
+sofort als scrypt-Hash gespeichert. Ablauf und Prüfung am Ende sind dieselben wie mit Fragen.
 
 ## Was das Skript anlegt
 
