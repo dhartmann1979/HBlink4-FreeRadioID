@@ -4928,9 +4928,41 @@ PROTO_VER: ${fd ? 5 : 1}`;
             try { const d = await api('GET', '/api/admin/update-log'); out.textContent = d.log || 'No update from the dashboard yet.'; out.scrollTop = out.scrollHeight; } catch (e) { out.textContent = e.message; }
         }
 
+        // ---------- Keep-Alive (N8 Admin-Kit): every minute as root – services checked for real, internet outage, heartbeat ----------
+        async function loadKeepalive() {
+            const el = document.getElementById('kaTile'); if (!el) return;
+            let d; try { d = await api('GET', '/api/admin/keepalive'); } catch (e) { el.innerHTML = `<h3>💓 Keep-Alive</h3><div class="muted">⚠️ ${escapeHtml(e.message)}</div>`; return; }
+            const c = d.conf || {}, paused = c.paused_until && c.paused_until * 1000 > Date.now();
+            const badge = !d.ready ? '<span class="auth-guest">not set up</span>' : !c.enabled ? '<span class="muted">off</span>' : paused ? '<span class="auth-guest">paused</span>'
+                : d.stale ? '<span class="auth-bad">not running</span>' : '<span class="auth-ok">active</span>';
+            const ic = st => ({ ok: '✅', hold: '⏸️', restarted: '🔄', giveup: '❌' }[st] || '⚠️');
+            el.innerHTML = `<h3>💓 Keep-Alive ${badge}</h3>
+                <p class="muted" style="font-size:12.5px;margin:0 0 8px">Every minute as root: checks the dashboard, the DMR server (UDP port, link to the dashboard) and APRS (server and uplink) for real, restarts sick services after 3 minutes (at most 4× per hour), notices internet outages and restarts the network services afterwards, and reports to a heartbeat address (Uptime Kuma “push”, Healthchecks.io …). A service stopped here stays stopped.</p>
+                ${d.ready ? `<p style="margin:0 0 8px">🌐 Internet: ${d.net ? '<span class="auth-ok">reachable</span>' : `<span class="auth-bad">down since ${fmtTime(d.net_down_since)}</span>`} · last check ${d.age != null && d.age < 120 ? 'just now' : fmtTime(d.time)}${c.heartbeat_url ? ` · heartbeat: ${escapeHtml(d.heartbeat || '—')}` : ''}</p>
+                  <table class="svc-tbl"><tbody>${(d.checks || []).map(x => `<tr><td style="width:24px">${ic(x.state)}</td><td><b>${escapeHtml(x.label)}</b> <span class="muted mono" style="font-size:11.5px">${escapeHtml(x.unit)}</span></td>
+                    <td class="muted">${x.state === 'ok' ? 'healthy' : x.state === 'hold' ? 'stopped by hand – keep-alive waits' : escapeHtml(x.why || '')}${x.restarts ? ` · ${x.restarts}× restarted${x.last_restart ? ', last ' + fmtTime(x.last_restart) : ''}` : ''}</td></tr>`).join('')}</tbody></table>`
+                  : '<p class="muted">Set up once on the console: <code>sudo scripts/n8-admin.sh fix-perms</code></p>'}
+                <div class="set-grid" style="margin-top:10px">
+                  <label class="set-row"><span>Keep-Alive on</span><label class="switch"><input type="checkbox" id="kaOn" ${c.enabled ? 'checked' : ''}><span></span></label></label>
+                  <label class="set-row"><span>Restart network services after an internet outage</span><label class="switch"><input type="checkbox" id="kaNet" ${c.net_restart ? 'checked' : ''}><span></span></label></label>
+                  <label class="set-row"><span>Heartbeat address</span><input type="text" id="kaHb" value="${escapeHtml(c.heartbeat_url || '')}" placeholder="https://hc-ping.com/… or https://kuma…/api/push/…"></label>
+                  <label class="set-row"><span>Heartbeat on errors (optional)</span><input type="text" id="kaHbF" value="${escapeHtml(c.heartbeat_fail_url || '')}" placeholder="https://hc-ping.com/…/fail"></label></div>
+                <div class="set-actions" style="justify-content:flex-start"><button class="btn-s btn-primary" onclick="saveKeepalive()">💾 Save</button>
+                  <button class="btn-s" onclick="pauseKeepalive(${paused ? 0 : 60})">${paused ? '▶ Resume' : '⏸ Pause 1 h (maintenance)'}</button></div>
+                ${d.log ? `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer">Keep-Alive log</summary><pre class="term-out">${escapeHtml(d.log)}</pre></details>` : ''}`;
+        }
+        async function saveKeepalive() {
+            const v = id => document.getElementById(id);
+            try { await api('POST', '/api/admin/keepalive', { enabled: v('kaOn').checked, net_restart: v('kaNet').checked, heartbeat_url: v('kaHb').value.trim(), heartbeat_fail_url: v('kaHbF').value.trim() });
+                  toast('Keep-Alive saved', 'ok'); loadKeepalive(); } catch (e) { toast(e.message, 'bad'); }
+        }
+        async function pauseKeepalive(min) {
+            try { await api('POST', '/api/admin/keepalive', { pause_minutes: min }); loadKeepalive(); } catch (e) { toast(e.message, 'bad'); }
+        }
+
         async function adminSystem() {
             setTimeout(() => sysUpdCheck(false), 50);
-            setTimeout(() => { loadServices(); loadPerms(); }, 80);
+            setTimeout(() => { loadServices(); loadPerms(); loadKeepalive(); }, 80);
             const s = await api('GET', '/api/admin/system');
             const yes = '<span class="auth-ok">yes</span>', no = '<span class="muted">no</span>';
             return `<div class="station-grid two">
@@ -4964,6 +4996,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
                     <div class="set-actions" style="justify-content:flex-start;margin-top:8px"><button class="btn-s" onclick="loadPerms()">🔍 Check again</button>
                         <button class="btn-s btn-primary" onclick="fixPerms(this)">🛠️ Fix</button><button class="btn-s" onclick="showUpdateLog()">📜 Update log</button></div>
                     <pre id="permOut" class="term-out" hidden></pre></section></div>
+                <section class="tile" style="margin-top:14px" id="kaTile"><h3>💓 Keep-Alive</h3><span class="muted">loading…</span></section>
                 <div class="set-actions" style="justify-content:flex-start">
                     <button class="btn-s" onclick="adminTab('settings')">⚙️ Change settings</button>
                     ${s.systemd ? '<button class="btn-s" onclick="restartDashboard()">🔄 Restart dashboard</button>' : ''}

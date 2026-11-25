@@ -3,6 +3,15 @@
 N8Kit.i18n.add({
     base: 'en',
     de: {
+        // 1.13.0: Keep-Alive
+        "Every minute as root: checks the dashboard, the DMR server (UDP port, link to the dashboard) and APRS (server and uplink) for real, restarts sick services after 3 minutes (at most 4× per hour), notices internet outages and restarts the network services afterwards, and reports to a heartbeat address (Uptime Kuma “push”, Healthchecks.io …). A service stopped here stays stopped.":
+            "Jede Minute als root: prüft Dashboard, DMR-Server (UDP-Port, Verbindung zum Dashboard) und APRS (Server und Uplink) wirklich, startet kranke Dienste nach 3 Minuten neu (höchstens 4× je Stunde), erkennt Internet-Ausfälle und startet danach die Netzdienste neu, und meldet sich bei einer Heartbeat-Adresse (Uptime Kuma „Push“, Healthchecks.io …). Ein hier gestoppter Dienst bleibt gestoppt.",
+        "Keep-Alive": "Keep-Alive", "not set up": "nicht eingerichtet", "off": "aus", "paused": "pausiert", "not running": "läuft nicht", "active": "aktiv",
+        "reachable": "erreichbar", "just now": "gerade eben", "healthy": "gesund", "stopped by hand – keep-alive waits": "von Hand gestoppt – Keep-Alive wartet",
+        "Keep-Alive on": "Keep-Alive an", "Restart network services after an internet outage": "Netzdienste nach einem Internet-Ausfall neu starten",
+        "Heartbeat address": "Heartbeat-Adresse", "Heartbeat on errors (optional)": "Heartbeat bei Fehlern (optional)", "Resume": "Fortsetzen",
+        "Pause 1 h (maintenance)": "1 h pausieren (Wartung)", "Keep-Alive log": "Keep-Alive-Protokoll", "Keep-Alive saved": "Keep-Alive gespeichert",
+        "Set up once on the console:": "Einmal auf der Konsole einrichten:",
         // services, permissions & sudo (n8-admin)
         "Services": "Dienste",
         "Status, autostart at boot and start, stop, restart – only the services released for this dashboard": "Status, Autostart beim Booten und Starten, Stoppen, Neustarten – nur die für dieses Dashboard freigegebenen Dienste",
@@ -281,6 +290,7 @@ N8Kit.i18n.add({
         'Path': 'Pfad', 'Position': 'Position', 'Distance': 'Entfernung', 'Via': 'Über', 'Hotspot': 'Hotspot', 'Kind of GPS report': 'Art der GPS-Meldung', 'Talkgroup': 'Talkgroup',
     },
     rules: [
+        [/^down since (.+)$/, 'weg seit $1'], [/^last check (.+)$/, 'letzte Prüfung $1'],
         [/^(\d+) missed$/, '$1 verpasst'], [/^All · TS(\d)$/, 'Alle · TS$1'], [/^no keep-alive$/, 'kein Keep-Alive'],
         [/^(\d+)m ago$/, 'vor $1 Min.'], [/^(\d+)s ago$/, 'vor $1 s'], [/^(\d+)h ago$/, 'vor $1 Std.'], [/^(\d+)d ago$/, 'vor $1 T.'],
         [/^([\d.,]+ ?[mhs]+) · (\d+) speakers?$/, '$1 · $2 Sprecher'], [/^(\d+) names? sent by the radios$/, '$1 Namen von den Funkgeräten'],

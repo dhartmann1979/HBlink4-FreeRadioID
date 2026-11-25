@@ -26,3 +26,14 @@ def test_root_owned_update_files_do_not_stop_the_dashboard(tmp_path, monkeypatch
     monkeypatch.setattr(os, "access", lambda p, m: False if Path(p).name == "dashboard.db" else real(p, m))
     with pytest.raises(SystemExit):
         ns["_ensure_writable"](tmp_path)
+
+
+def test_keepalive_wired():
+    conf = (ROOT / "scripts" / "n8-admin.conf").read_text()
+    for k in ("N8_KA_CHECKS=", "hblink4.service|fn|n8_ka_dmr_port", "#hblink", "#aprs", "N8_KA_NET_UNITS=(hblink4.service hblink4-dash.service)"):
+        assert k in conf, k
+    srv = (ROOT / "dashboard" / "server.py").read_text()
+    assert '@app.get("/api/n8/health")' in srv and '@app.post("/api/admin/keepalive")' in srv and '"local only"' in srv
+    assert "loadKeepalive()" in (ROOT / "dashboard" / "static" / "dashboard.html").read_text()
+    import subprocess
+    assert subprocess.run(["bash", "-n", str(ROOT / "scripts" / "n8-admin.conf")]).returncode == 0

@@ -1564,6 +1564,46 @@ async def admin_perms_fix(request: Request):
     return {"ok": ok, "message": out, "check": await _n8().check_perms()}
 
 
+@app.get("/api/admin/keepalive")
+async def admin_keepalive(request: Request):
+    _require_admin(request)
+    return _n8().keepalive()
+
+
+@app.post("/api/admin/keepalive")
+async def admin_keepalive_set(request: Request):
+    actor = _require_admin(request)
+    try:
+        b = await request.json()
+        c = _n8().keepalive_set(b if isinstance(b, dict) else {})
+    except (ValueError, TypeError) as e:
+        raise _HTTPError(400, str(e))
+    state.auth.audit("keepalive", actor["username"], ", ".join(f"{k}={'…' if 'url' in k and v else v}" for k, v in c.items()),
+                     _client_ip(request))
+    return _n8().keepalive()
+
+
+@app.get("/api/n8/health")
+async def n8_health(request: Request):
+    """Für den Keep-Alive (scripts/n8-admin.sh): Zustand der Teile – nur direkt von diesem Rechner, nie über einen Proxy."""
+    host = request.client.host if request.client else ""
+    if host not in ("127.0.0.1", "::1") or any(h in request.headers for h in ("x-forwarded-for", "x-real-ip", "forwarded", "via")):
+        raise _HTTPError(403, "local only")
+    a = state.aprs.status() if getattr(state, "aprs", None) else {"enabled": False}
+    aprs_ok, why = True, ""
+    if a.get("enabled"):
+        if a.get("server_enabled") and not a.get("listening"):
+            aprs_ok, why = False, "APRS-Server lauscht nicht (Ports 14580/10152)"
+        elif a.get("uplink_enabled") and (a.get("uplink") or {}).get("state") != "connected":
+            u = a.get("uplink") or {}
+            aprs_ok, why = False, f"APRS-Uplink nicht verbunden ({u.get('server') or '?'}: {u.get('error') or u.get('state') or '?'})"
+    return {"ok": True, "items": {
+        "web": {"ok": True},
+        "hblink": {"ok": bool(state.hblink_connected), "why": "" if state.hblink_connected else "HBlink4 meldet sich nicht beim Dashboard (Event-Verbindung)"},
+        "aprs": {"ok": aprs_ok, "why": why},
+    }}
+
+
 @app.get("/api/admin/update-log")
 async def admin_update_log(request: Request):
     _require_admin(request)
