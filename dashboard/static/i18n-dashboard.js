@@ -4,7 +4,7 @@ N8Kit.i18n.add({
     base: 'en',
     de: {
         // 1.13.0: admin menu tree and System views (N8 Kit 1.1)
-        'Server & HTTPS': 'Server & HTTPS', 'HTTPS': 'HTTPS', 'Access': 'Zugang', 'Sessions': 'Sitzungen', 'GitHub not reachable': 'GitHub nicht erreichbar',
+        'Server & HTTPS': 'Server & HTTPS', 'DMR server': 'DMR-Server', 'HTTPS': 'HTTPS', 'Access': 'Zugang', 'Sessions': 'Sitzungen', 'GitHub not reachable': 'GitHub nicht erreichbar',
         'State of HTTPS, access and the DMR server, plus restart buttons. Update, services, permissions and keep-alive are the next entries of the menu':
             'Zustand von HTTPS, Zugang und DMR-Server, dazu die Neustart-Knöpfe. Update, Dienste, Berechtigungen und Keep-Alive sind die nächsten Einträge im Menü',
         // 1.13.0: Keep-Alive

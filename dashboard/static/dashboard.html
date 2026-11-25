@@ -1953,6 +1953,8 @@
         .modal-content.admin > .hb-admin { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 4px; padding-left: 14px; }
         .hb-admin > .n8-tree { position: static; max-height: none; overflow-y: auto; margin: 6px 0 16px; }
         .hb-admin > .admin-body { min-height: 0; overflow-y: auto; }
+        .hb-admin .set-nav, .hb-admin .set-nav-select { display: none !important; }   /* their entries are in the tree now */
+        .hb-admin .set-layout { grid-template-columns: minmax(0, 1fr) !important; }
         @media (max-width: 860px) { .modal-content.admin > .hb-admin { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); padding: 0 12px; }
             .hb-admin > .n8-tree { margin: 4px 0 0; } .hb-admin > .admin-body { padding: 10px 2px 16px; } }
         .admin-tabs { align-items: center; }
@@ -3222,7 +3224,9 @@
         function adminGroups() {
             const G = N8Kit.nav.GROUPS;
             return [
-                { id: 'betrieb', label: G.betrieb, items: [{ id: 'settings', label: '⚙️ Settings' }, { id: 'obp', label: '↔️ OpenBridge' }, { id: 'aprs', label: '📡 APRS' },
+                { id: 'betrieb', label: G.betrieb, items: [{ id: 'settings', label: '⚙️ Settings', children: setChildren(false) },
+                    { id: 'dmrset', label: '🛰️ DMR server', children: setChildren(true) }, { id: 'obp', label: '↔️ OpenBridge' },
+                    { id: 'aprs', label: '📡 APRS', children: APRS_VIEWS.map(([k, l]) => ({ id: 'aprs:' + k, label: l })) },
                     { id: 'import', label: '📥 Import' }, { id: 'audit', label: '📜 Log' }] },
                 { id: 'zugang', label: G.zugang, items: [{ id: 'users', label: '👥 Users' }, { id: 'sessions', label: '🔑 Sessions' }] },
                 { id: 'darstellung', label: G.darstellung, items: [{ id: 'appearance', label: '🎨 Appearance' }, { id: 'links', label: '🔗 Links' }] },
@@ -3231,6 +3235,10 @@
             ];
         }
         const ADMIN_OLD = { updates: 'sys-update' };
+        // the former side menu of the settings (Dashboard · DMR server) now hangs in the tree under ⚙️ Settings
+        function setChildren(dmr) {
+            return (setUi.sections || []).filter(x => !SET_CUSTOM.has(x.id) && !!x.dmr === dmr).map(x => ({ id: 'settings:' + x.id, label: x.title }));
+        }
 
         // One line on top of the tabs that have no own heading
         const ADMIN_INTRO = {
@@ -3255,23 +3263,37 @@
 
         async function adminTab(tab) {
             tab = ADMIN_OLD[tab] || tab;
-            if (!adminGroups().some(g => g.items.some(i => i.id === tab))) tab = 'users';
+            let [base, sub] = tab.split(':');
+            if (base === 'dmrset') {                    // 🛰️ DMR server = the DMR sections of the settings
+                if (!setUi.sections) { try { await loadSettingsData(); } catch (e) { /* shown by adminSettings */ } }
+                const first = setChildren(true)[0];
+                tab = first ? first.id : 'settings'; [base, sub] = tab.split(':');
+            }
+            if (!adminGroups().some(g => g.items.some(i => i.id === base))) { tab = base = 'users'; sub = ''; }
             const nav = document.getElementById('adminNav');
-            if (nav) N8Kit.nav.tree(nav, adminGroups(), { active: tab, key: 'hb4-admin', onSelect: adminTab });
-            if (tab !== 'appearance' && document.getElementById('apForm')) loadConfig();
+            const drawNav = () => { if (nav) N8Kit.nav.tree(nav, adminGroups(), { active: tab, key: 'hb4-admin', onSelect: adminTab }); };
+            drawNav();
+            if (base !== 'appearance' && document.getElementById('apForm')) loadConfig();
             const body = document.getElementById('adminBody');
             if (!body) return;
-            body.dataset.tab = tab;
+            // a child of the open page: only switch the section, nothing to load again
+            if (sub && body.dataset.tab === base && base === 'settings' && document.getElementById('setPanel')) { setShow(sub); body.scrollTop = 0; return; }
+            if (sub && body.dataset.tab === base && base === 'aprs' && document.getElementById('aprsPanel')) { aprsShow(sub); body.scrollTop = 0; return; }
+            if (base === 'settings' && sub) setUi.current = sub;
+            if (base === 'aprs') aprsUi.view = sub || 'overview';
+            body.dataset.tab = base;
             body.classList.remove('n8-sys');
             body.scrollTop = 0;
-            if (tab.startsWith('sys-')) { loadSysView(body, tab.slice(4)); return; }
+            if (base.startsWith('sys-')) { loadSysView(body, base.slice(4)); return; }
             body.innerHTML = '<div class="muted">Loading…</div>';
             try {
-                const intro = ADMIN_INTRO[tab] ? `<div class="tab-intro"><h3 class="set-panel-title">${ADMIN_INTRO[tab][0]}</h3>
-                    <p class="set-panel-help">${ADMIN_INTRO[tab][1]}</p></div>` : '';
+                const intro = ADMIN_INTRO[base] ? `<div class="tab-intro"><h3 class="set-panel-title">${ADMIN_INTRO[base][0]}</h3>
+                    <p class="set-panel-help">${ADMIN_INTRO[base][1]}</p></div>` : '';
                 body.innerHTML = intro + await ({ users: adminUsers, settings: adminSettings, appearance: adminAppearance,
                                           links: adminLinks, obp: adminObp, aprs: adminAprs, backup: adminBackup, import: adminImport, sessions: adminSessions,
-                                          audit: adminAudit, system: adminSystem })[tab]();
+                                          audit: adminAudit, system: adminSystem })[base]();
+                if (base === 'settings' && !sub) { tab = 'settings:' + setUi.current; }
+                if (base === 'settings' || base === 'aprs') drawNav();      // the sections are known now
             } catch (e) { body.innerHTML = `<div class="form-error">${escapeHtml(e.message)}</div>`; }
         }
 
