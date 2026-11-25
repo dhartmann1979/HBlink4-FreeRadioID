@@ -1949,6 +1949,12 @@
         /* ---- admin fixes ---- */
         /* fixed-height window: header, tab bar and area selector keep their size, only the body scrolls */
         .modal-content.admin > :not(.admin-body) { flex-shrink: 0; }
+        /* admin menu as a tree on the left (N8 Kit 1.1, the same in every N8 system) */
+        .modal-content.admin > .hb-admin { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 4px; padding-left: 14px; }
+        .hb-admin > .n8-tree { position: static; max-height: none; overflow-y: auto; margin: 6px 0 16px; }
+        .hb-admin > .admin-body { min-height: 0; overflow-y: auto; }
+        @media (max-width: 860px) { .modal-content.admin > .hb-admin { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); padding: 0 12px; }
+            .hb-admin > .n8-tree { margin: 4px 0 0; } .hb-admin > .admin-body { padding: 10px 2px 16px; } }
         .admin-tabs { align-items: center; }
         @media (max-width: 600px) { .set-panel-head { flex-wrap: wrap; } .imp-sel { justify-content: flex-start; } }
         .admin-tabs { padding-top: 6px !important; padding-bottom: 8px !important; }
@@ -3212,16 +3218,26 @@
         }
 
         // ---------- Admin area ----------
-        const ADMIN_TABS = [['users', '👥 Users'], ['settings', '⚙️ Settings'], ['appearance', '🎨 Appearance'],
-                            ['links', '🔗 Links'], ['obp', '↔️ OpenBridge'], ['aprs', '📡 APRS'], ['backup', '💾 Backup'], ['import', '📥 Import'], ['sessions', '🔑 Sessions'],
-                            ['audit', '📜 Log'], ['system', '🖥️ System']];
+        // Admin menu: the same tree in every N8 system (N8 Kit) – Betrieb · Benutzer & Zugang · Darstellung · System
+        function adminGroups() {
+            const G = N8Kit.nav.GROUPS;
+            return [
+                { id: 'betrieb', label: G.betrieb, items: [{ id: 'settings', label: '⚙️ Settings' }, { id: 'obp', label: '↔️ OpenBridge' }, { id: 'aprs', label: '📡 APRS' },
+                    { id: 'import', label: '📥 Import' }, { id: 'audit', label: '📜 Log' }] },
+                { id: 'zugang', label: G.zugang, items: [{ id: 'users', label: '👥 Users' }, { id: 'sessions', label: '🔑 Sessions' }] },
+                { id: 'darstellung', label: G.darstellung, items: [{ id: 'appearance', label: '🎨 Appearance' }, { id: 'links', label: '🔗 Links' }] },
+                { id: 'system', label: G.system, items: [{ id: 'system', label: '🖥️ Server & HTTPS' }, ...N8Kit.nav.SYS_ITEMS.map(([id, label]) => ({ id, label })),
+                    { id: 'backup', label: '💾 Backup' }] },
+            ];
+        }
+        const ADMIN_OLD = { updates: 'sys-update' };
 
         // One line on top of the tabs that have no own heading
         const ADMIN_INTRO = {
             users: ['👥 Users', 'Who may log in. Admins see IP addresses and ports and change settings; users only see the dashboard.'],
             sessions: ['🔑 Sessions', 'All current logins. End one with „Revoke“ – that device is logged out at once.'],
             audit: ['📜 Log', 'Logins, failed attempts and every change in the admin area, with time, person and IP address.'],
-            system: ['🖥️ System', 'State of HTTPS, access and the DMR server, the installed version and updates, plus restart buttons.'],
+            system: ['🖥️ Server & HTTPS', 'State of HTTPS, access and the DMR server, plus restart buttons. Update, services, permissions and keep-alive are the next entries of the menu.'],
         };
 
         function openAdmin(tab = 'users') {
@@ -3230,9 +3246,7 @@
                     <h2>⚙️ Admin area</h2>
                     <button class="modal-close" aria-label="Close" onclick="this.closest('.modal-overlay')._close()">×</button>
                 </div>
-                <nav class="tabs admin-tabs">${ADMIN_TABS.map(([k, l]) => `<button data-tab="${k}" onclick="adminTab('${k}')">${l}</button>`).join('')}</nav>
-                <label class="admin-tab-select">Area <select onchange="adminTab(this.value)">${ADMIN_TABS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
-                <div class="admin-body" id="adminBody"></div>`, 'admin');
+                <div class="hb-admin"><nav id="adminNav" aria-label="Admin"></nav><div class="admin-body" id="adminBody"></div></div>`, 'admin');
             m.id = 'adminModal';
             // unsaved appearance changes are only a preview: closing restores the saved look
             const close = m._close; m._close = () => { close(); loadConfig(); };
@@ -3240,12 +3254,17 @@
         }
 
         async function adminTab(tab) {
-            document.querySelectorAll('#adminModal .tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-            const tsel = document.querySelector('#adminModal .admin-tab-select select'); if (tsel) tsel.value = tab;
+            tab = ADMIN_OLD[tab] || tab;
+            if (!adminGroups().some(g => g.items.some(i => i.id === tab))) tab = 'users';
+            const nav = document.getElementById('adminNav');
+            if (nav) N8Kit.nav.tree(nav, adminGroups(), { active: tab, key: 'hb4-admin', onSelect: adminTab });
             if (tab !== 'appearance' && document.getElementById('apForm')) loadConfig();
             const body = document.getElementById('adminBody');
             if (!body) return;
             body.dataset.tab = tab;
+            body.classList.remove('n8-sys');
+            body.scrollTop = 0;
+            if (tab.startsWith('sys-')) { loadSysView(body, tab.slice(4)); return; }
             body.innerHTML = '<div class="muted">Loading…</div>';
             try {
                 const intro = ADMIN_INTRO[tab] ? `<div class="tab-intro"><h3 class="set-panel-title">${ADMIN_INTRO[tab][0]}</h3>
@@ -4868,101 +4887,26 @@ PROTO_VER: ${fd ? 5 : 1}`;
                 </tr>`).join('')}</tbody></table>`;
         }
 
-        async function sysUpdCheck(force) {
-            const el = document.getElementById('sysUpd'); if (!el) return;
-            const u = await checkUpdate(force);
-            if (!u) { el.innerHTML = infoRow('GitHub', '<span class="auth-guest">not reachable</span>'); return; }
-            const k = kitUpdateState(u);
-            k.extra = [['Branch', escapeHtml(u.branch || '—')],
-                       ['Restart after update', u.sudo_restart ? 'systemctl via sudo' : u.systemd ? 'by systemd (Restart=always)' : 'by hand'],
-                       ['Update now', u.can_install ? '<span class="auth-ok">allowed for you</span>' : `<span class="muted">${u.install_role === 'nobody' ? 'switched off' : 'superadmin only'}</span>`]];
-            N8Kit.update.panel(el, k, { onCheck: () => sysUpdCheck(true), onInstall: () => openUpdateDialog() });
-        }
-
-        // ---------- Services, permissions & sudo, update log (scripts/n8-admin.sh) ----------
-        const SVC_STATE = { active: 'running', inactive: 'stopped', failed: 'failed', activating: 'starting', deactivating: 'stopping' };
-        function renderServices(d) {
-            const el = document.getElementById('svcList'); if (!el) return;
-            if (!d.units.length) { el.innerHTML = '<div class="muted">Not set up yet – run once on the console: <code>sudo scripts/n8-admin.sh fix-perms</code></div>'; return; }
-            const cls = a => a === 'active' ? 'auth-ok' : a === 'failed' ? 'auth-bad' : 'auth-guest';
-            const b = (u, a, icon, title) => u.actions.includes(a) ? `<button class="btn-s" title="${title}" onclick="svcAction('${escapeHtml(u.unit)}','${a}',this)">${icon}</button>` : '';
-            el.innerHTML = `<table class="svc-tbl"><tbody>${d.units.map(u => `<tr>
-                <td><span class="svc-dot ${u.active === 'active' ? 'on' : u.active === 'failed' ? 'bad' : ''}"></span><b>${escapeHtml(u.label)}</b><div class="muted mono" style="font-size:11.5px">${escapeHtml(u.unit)}</div></td>
-                <td><span class="${cls(u.active)}">${escapeHtml(SVC_STATE[u.active] || u.active)}</span></td>
-                <td>${u.actions.includes('enable') ? `<label class="switch" title="Autostart at boot"><input type="checkbox" ${u.enabled === 'enabled' ? 'checked' : ''} onchange="svcAction('${escapeHtml(u.unit)}', this.checked ? 'enable' : 'disable', this)"><span></span></label> <span class="muted">Autostart</span>` : `<span class="muted">${escapeHtml(u.enabled)}</span>`}</td>
-                <td style="text-align:right;white-space:nowrap">${u.active === 'active' ? b(u, 'restart', '🔄', 'Restart') + b(u, 'stop', '⏹', 'Stop') : b(u, 'start', '▶', 'Start')}</td></tr>`).join('')}</tbody></table>`;
-        }
-        async function loadServices() { try { renderServices(await api('GET', '/api/admin/services')); } catch (e) { const el = document.getElementById('svcList'); if (el) el.innerHTML = `<div class="muted">⚠️ ${escapeHtml(e.message)}</div>`; } }
-        async function svcAction(unit, action, el) {
-            if (['stop', 'disable'].includes(action)) {
-                const self = unit === 'hblink4-dash.service';
-                const msg = action === 'stop' ? (self ? 'Stop the dashboard? It is gone afterwards – start it again on the console: sudo systemctl start hblink4-dash' : `Stop ${unit}? Repeaters and hotspots lose the connection.`) : `Switch off autostart of ${unit}? After a reboot it does not start by itself.`;
-                if (!confirm(msg)) { if (el && el.type === 'checkbox') el.checked = true; return; }
-            }
-            if (el) el.disabled = true;
-            try { const r = await api('POST', `/api/admin/services/${encodeURIComponent(unit)}/${action}`, {}); toast('✓ ' + (r.message || action), 'ok'); renderServices(r); }
-            catch (e) { toast(e.message, 'bad'); loadServices(); }
-        }
-        const PERM_AREA = { user: '👤 Service user', prog: '📦 Program', data: '💾 Data', systemd: '⚙️ systemd', sudo: '🛡️ sudo' };
-        function renderPerms(d) {
-            const el = document.getElementById('permList'), rows = d.checks || [];
-            document.getElementById('permBadge').innerHTML = !rows.length ? '<span class="auth-guest">not checked</span>' : d.bad ? `<span class="auth-bad">${d.bad} errors</span>` : '<span class="auth-ok">all fine</span>';
-            if (!rows.length) { el.innerHTML = `<div class="muted">${escapeHtml(d.message || '–')}</div>`; return; }
-            const areas = [...new Set(rows.map(c => c.area))];
-            el.innerHTML = `<div style="max-height:320px;overflow:auto"><table class="svc-tbl"><tbody>${areas.map(a => rows.filter(c => c.area === a).map((c, i) =>
-                `<tr><td style="width:120px">${i ? '' : `<b>${escapeHtml(PERM_AREA[a] || a)}</b>`}</td><td style="width:22px">${c.status === 'ok' ? '✅' : c.status === 'warn' ? '⚠️' : '❌'}</td>
-                 <td class="${c.status === 'bad' ? '' : 'muted'}">${escapeHtml(c.text)}</td></tr>`).join('')).join('')}</tbody></table></div>`;
-        }
-        async function loadPerms() {
-            const el = document.getElementById('permList'); if (!el) return; el.innerHTML = '<span class="muted">checking…</span>';
-            try { renderPerms(await api('GET', '/api/admin/perms')); } catch (e) { el.innerHTML = `<div class="muted">⚠️ ${escapeHtml(e.message)}</div>`; }
-        }
-        async function fixPerms(btn) {
-            btn.disabled = true; const out = document.getElementById('permOut'); out.hidden = false; out.textContent = 'checking and fixing…';
-            try { const r = await api('POST', '/api/admin/perms/fix', {}); out.textContent = r.message || ''; if (r.check) renderPerms(r.check); toast(r.ok ? 'Permissions are fine' : 'Not everything could be fixed', r.ok ? 'ok' : 'bad'); loadServices(); }
-            catch (e) { out.textContent = e.message; toast(e.message, 'bad'); }
-            btn.disabled = false;
-        }
-        async function showUpdateLog() {
-            const out = document.getElementById('permOut'); out.hidden = false;
-            try { const d = await api('GET', '/api/admin/update-log'); out.textContent = d.log || 'No update from the dashboard yet.'; out.scrollTop = out.scrollHeight; } catch (e) { out.textContent = e.message; }
-        }
-
-        // ---------- Keep-Alive (N8 Admin-Kit): every minute as root – services checked for real, internet outage, heartbeat ----------
-        async function loadKeepalive() {
-            const el = document.getElementById('kaTile'); if (!el) return;
-            let d; try { d = await api('GET', '/api/admin/keepalive'); } catch (e) { el.innerHTML = `<h3>💓 Keep-Alive</h3><div class="muted">⚠️ ${escapeHtml(e.message)}</div>`; return; }
-            const c = d.conf || {}, paused = c.paused_until && c.paused_until * 1000 > Date.now();
-            const badge = !d.ready ? '<span class="auth-guest">not set up</span>' : !c.enabled ? '<span class="muted">off</span>' : paused ? '<span class="auth-guest">paused</span>'
-                : d.stale ? '<span class="auth-bad">not running</span>' : '<span class="auth-ok">active</span>';
-            const ic = st => ({ ok: '✅', hold: '⏸️', restarted: '🔄', giveup: '❌' }[st] || '⚠️');
-            el.innerHTML = `<h3>💓 Keep-Alive ${badge}</h3>
-                <p class="muted" style="font-size:12.5px;margin:0 0 8px">Every minute as root: checks the dashboard, the DMR server (UDP port, link to the dashboard) and APRS (server and uplink) for real, restarts sick services after 3 minutes (at most 4× per hour), notices internet outages and restarts the network services afterwards, and reports to a heartbeat address (Uptime Kuma “push”, Healthchecks.io …). A service stopped here stays stopped.</p>
-                ${d.ready ? `<p style="margin:0 0 8px">🌐 Internet: ${d.net ? '<span class="auth-ok">reachable</span>' : `<span class="auth-bad">down since ${fmtTime(d.net_down_since)}</span>`} · last check ${d.age != null && d.age < 120 ? 'just now' : fmtTime(d.time)}${c.heartbeat_url ? ` · heartbeat: ${escapeHtml(d.heartbeat || '—')}` : ''}</p>
-                  <table class="svc-tbl"><tbody>${(d.checks || []).map(x => `<tr><td style="width:24px">${ic(x.state)}</td><td><b>${escapeHtml(x.label)}</b> <span class="muted mono" style="font-size:11.5px">${escapeHtml(x.unit)}</span></td>
-                    <td class="muted">${x.state === 'ok' ? 'healthy' : x.state === 'hold' ? 'stopped by hand – keep-alive waits' : escapeHtml(x.why || '')}${x.restarts ? ` · ${x.restarts}× restarted${x.last_restart ? ', last ' + fmtTime(x.last_restart) : ''}` : ''}</td></tr>`).join('')}</tbody></table>`
-                  : '<p class="muted">Set up once on the console: <code>sudo scripts/n8-admin.sh fix-perms</code></p>'}
-                <div class="set-grid" style="margin-top:10px">
-                  <label class="set-row"><span>Keep-Alive on</span><label class="switch"><input type="checkbox" id="kaOn" ${c.enabled ? 'checked' : ''}><span></span></label></label>
-                  <label class="set-row"><span>Restart network services after an internet outage</span><label class="switch"><input type="checkbox" id="kaNet" ${c.net_restart ? 'checked' : ''}><span></span></label></label>
-                  <label class="set-row"><span>Heartbeat address</span><input type="text" id="kaHb" value="${escapeHtml(c.heartbeat_url || '')}" placeholder="https://hc-ping.com/… or https://kuma…/api/push/…"></label>
-                  <label class="set-row"><span>Heartbeat on errors (optional)</span><input type="text" id="kaHbF" value="${escapeHtml(c.heartbeat_fail_url || '')}" placeholder="https://hc-ping.com/…/fail"></label></div>
-                <div class="set-actions" style="justify-content:flex-start"><button class="btn-s btn-primary" onclick="saveKeepalive()">💾 Save</button>
-                  <button class="btn-s" onclick="pauseKeepalive(${paused ? 0 : 60})">${paused ? '▶ Resume' : '⏸ Pause 1 h (maintenance)'}</button></div>
-                ${d.log ? `<details style="margin-top:8px"><summary class="muted" style="cursor:pointer">Keep-Alive log</summary><pre class="term-out">${escapeHtml(d.log)}</pre></details>` : ''}`;
-        }
-        async function saveKeepalive() {
-            const v = id => document.getElementById(id);
-            try { await api('POST', '/api/admin/keepalive', { enabled: v('kaOn').checked, net_restart: v('kaNet').checked, heartbeat_url: v('kaHb').value.trim(), heartbeat_fail_url: v('kaHbF').value.trim() });
-                  toast('Keep-Alive saved', 'ok'); loadKeepalive(); } catch (e) { toast(e.message, 'bad'); }
-        }
-        async function pauseKeepalive(min) {
-            try { await api('POST', '/api/admin/keepalive', { pause_minutes: min }); loadKeepalive(); } catch (e) { toast(e.message, 'bad'); }
+        // Admin → System: update, services, permissions & sudo, keep-alive – the N8 Kit views, identical in every N8 system
+        function loadSysView(el, name) {
+            N8Kit.sys.view(el, name, {
+                req: api, console: 'sudo scripts/n8-admin.sh',
+                update: {
+                    load: async (force) => {
+                        const u = await checkUpdate(force);
+                        if (!u) throw new Error('GitHub not reachable');
+                        const k = kitUpdateState(u);
+                        k.extra = [['Branch', escapeHtml(u.branch || '—')],
+                                   ['Restart after update', u.sudo_restart ? 'systemctl via sudo' : u.systemd ? 'by systemd (Restart=always)' : 'by hand'],
+                                   ['Update now', u.can_install ? '<span class="auth-ok">allowed for you</span>' : `<span class="muted">${u.install_role === 'nobody' ? 'switched off' : 'superadmin only'}</span>`]];
+                        return k;
+                    },
+                    onInstall: () => openUpdateDialog(),
+                },
+            });
         }
 
         async function adminSystem() {
-            setTimeout(() => sysUpdCheck(false), 50);
-            setTimeout(() => { loadServices(); loadPerms(); loadKeepalive(); }, 80);
             const s = await api('GET', '/api/admin/system');
             const yes = '<span class="auth-ok">yes</span>', no = '<span class="muted">no</span>';
             return `<div class="station-grid two">
@@ -4983,20 +4927,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
                     ${infoRow('FreeRadioID IDs', s.frid_ids)}
                     ${infoRow('Avatars cached', s.frid_avatars)}
                 </section>
-                <section class="tile" id="sysVersion"><h3>⬆️ Updates</h3>
-                    <div id="sysUpd">${infoRow('GitHub', '<span class="muted">checking…</span>')}</div>
-                </section></div>
-                <div class="station-grid two" style="margin-top:14px">
-                <section class="tile"><h3>🧩 Services</h3>
-                    <p class="muted" style="font-size:12.5px;margin:0 0 8px">Status, autostart at boot and start, stop, restart – only the services released for this dashboard.</p>
-                    <div id="svcList"><span class="muted">loading…</span></div></section>
-                <section class="tile"><h3>🔐 Permissions &amp; sudo <span id="permBadge"></span></h3>
-                    <p class="muted" style="font-size:12.5px;margin:0 0 8px">Checks the service user, program and data permissions, systemd units and the sudo rules. <b>Fix</b> repairs what is wrong and checks again. Console: <code>sudo scripts/n8-admin.sh check-perms</code> / <code>fix-perms</code>.</p>
-                    <div id="permList"><span class="muted">checking…</span></div>
-                    <div class="set-actions" style="justify-content:flex-start;margin-top:8px"><button class="btn-s" onclick="loadPerms()">🔍 Check again</button>
-                        <button class="btn-s btn-primary" onclick="fixPerms(this)">🛠️ Fix</button><button class="btn-s" onclick="showUpdateLog()">📜 Update log</button></div>
-                    <pre id="permOut" class="term-out" hidden></pre></section></div>
-                <section class="tile" style="margin-top:14px" id="kaTile"><h3>💓 Keep-Alive</h3><span class="muted">loading…</span></section>
+                </div>
                 <div class="set-actions" style="justify-content:flex-start">
                     <button class="btn-s" onclick="adminTab('settings')">⚙️ Change settings</button>
                     ${s.systemd ? '<button class="btn-s" onclick="restartDashboard()">🔄 Restart dashboard</button>' : ''}
@@ -7768,7 +7699,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             let u;
             try { u = await api('GET', '/api/admin/update' + (force ? '?force=1' : '')); } catch (e) { return null; }
             state.update = u;
-            N8Kit.update.banner(el, kitUpdateState(u), { app: 'hb4', onInstall: () => openUpdateDialog(), onDetails: () => openAdmin('system') });
+            N8Kit.update.banner(el, kitUpdateState(u), { app: 'hb4', onInstall: () => openUpdateDialog(), onDetails: () => openAdmin('sys-update') });
             return u;
         }
         // The server asks GitHub every full hour; the page picks the cached answer up every 10 minutes
@@ -7786,10 +7717,10 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const k = kitUpdateState(u);
             const target = u.latest.short;
             N8Kit.update.run({
-                from: k.current, to: k.latest, password: true,
+                from: k.current, to: k.latest, password: false,
                 text: `${k.notes}<div class="upd-facts"><div>📦 From: <code>${escapeHtml(u.origin || 'origin')}</code> (branch <code>${escapeHtml(u.branch || 'main')}</code>)</div><div>${RESTART_INFO[how]}</div></div>`,
-                install: async (password) => {
-                    const r = await api('POST', '/api/admin/update/install', { password, expected: u.latest.commit, restart: how !== 'manual' });
+                install: async () => {
+                    const r = await api('POST', '/api/admin/update/install', { expected: u.latest.commit, restart: how !== 'manual' });
                     state.auditDirty = true;
                     document.getElementById('updateBanner').hidden = true;
                     if (r.requirements_changed) return { restart: false, message: 'New Python packages are needed – not restarted. On the server: venv/bin/pip install -r requirements.txt -r requirements-dashboard.txt, then sudo systemctl restart hblink4 hblink4-dash.' };

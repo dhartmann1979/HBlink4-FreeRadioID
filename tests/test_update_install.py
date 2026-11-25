@@ -136,13 +136,12 @@ class TestInstallApi(unittest.TestCase):
     def post(self, body, header=True):
         return self.client.post("/api/admin/update/install", json=body, headers={"X-Dashboard": "1"} if header else {})
 
-    def test_needs_login_header_and_password(self):
-        self.assertEqual(self.post({"password": "SuperSecret1", "expected": "b" * 40}).status_code, 401)
+    def test_needs_login_and_header_but_no_password(self):
+        self.assertEqual(self.post({"expected": "b" * 40}).status_code, 401)
         self.login("boss", "SuperSecret1")
-        self.assertEqual(self.post({"password": "SuperSecret1", "expected": "b" * 40}, header=False).status_code, 403)
-        self.assertEqual(self.post({"password": "wrong", "expected": "b" * 40}).status_code, 403)
+        self.assertEqual(self.post({"expected": "b" * 40}, header=False).status_code, 403)
         self.assertEqual(self.calls, [])
-        r = self.post({"password": "SuperSecret1", "expected": "b" * 40})
+        r = self.post({"expected": "b" * 40})          # no password since 1.13.0 – the admin session is enough
         self.assertEqual(r.status_code, 200, r.text)
         self.assertEqual(self.calls, ["request"])
         self.assertTrue(r.json()["requested"])

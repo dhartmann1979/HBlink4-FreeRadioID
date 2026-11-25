@@ -1496,18 +1496,14 @@ async def api_admin_update(request: Request, force: bool = False):
 
 @app.post("/api/admin/update/install")
 async def api_admin_update_install(request: Request, body: dict = Body(...)):
-    """Update now: password again, fast-forward to the shown commit, then restart both services."""
+    """Update now (no password, admin session only): fast-forward to the shown commit, then restart both services."""
     global _update_last_try
     user = _require_admin(request)
     _backup_idle()
     ip = _client_ip(request)
     if not _may_install(user):
         raise _HTTPError(403, "You may not install updates (Settings → ⬆️ Updates → Who may press “Update now”).")
-    try:
-        await asyncio.to_thread(state.auth.confirm_password, user, str(body.get("password") or ""), ip)
-    except AuthError as e:
-        raise _HTTPError(403, str(e))
-    _backup_idle()
+    # no password: an admin session (cookie + CSRF header) and the "Update now" role are enough – the same in every N8 system
     if _update_lock.locked() or time.time() - _update_last_try < 30:
         raise _HTTPError(429, "An update is already running – please wait a moment.")
     async with _update_lock:

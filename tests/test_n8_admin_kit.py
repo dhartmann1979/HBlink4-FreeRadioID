@@ -34,6 +34,8 @@ def test_keepalive_wired():
         assert k in conf, k
     srv = (ROOT / "dashboard" / "server.py").read_text()
     assert '@app.get("/api/n8/health")' in srv and '@app.post("/api/admin/keepalive")' in srv and '"local only"' in srv
-    assert "loadKeepalive()" in (ROOT / "dashboard" / "static" / "dashboard.html").read_text()
+    html = (ROOT / "dashboard" / "static" / "dashboard.html").read_text()
+    assert "N8Kit.sys.view(" in html and "N8Kit.nav.tree(" in html and "password: false" in html   # N8 Kit 1.1: same System views and menu tree
+    assert "sys.view" in (ROOT / "dashboard" / "static" / "n8-kit.js").read_text()
     import subprocess
     assert subprocess.run(["bash", "-n", str(ROOT / "scripts" / "n8-admin.conf")]).returncode == 0
