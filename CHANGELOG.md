@@ -4,6 +4,14 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.15.2] – 2026-11-25
+
+### 🐛 Update-Fenster: „Nicht aktualisiert“ statt fälschlich „zurückgenommen“
+- Brach ein Update ab, bevor es irgendetwas geändert hatte (z. B. „von Hand geänderte Dateien“), meldete das Update-Fenster trotzdem
+  „Das Update wurde zurückgenommen“ und hakte „Dienst startet neu“ ab – irreführend. Jetzt liest es das Ergebnis des Updates
+  (`/api/admin/update-log`) und zeigt **„Nicht aktualisiert – es läuft unverändert die bisherige Version“** mit dem Grund. Nur ein
+  echter Rückbau heißt weiter „zurückgenommen“ (mit Grund). N8 Kit 1.4.1, gleich in allen N8-Systemen.
+
 ## [1.15.1] – 2026-11-25
 
 ### 🛠️ Update: fehlende Programmdateien werden wiederhergestellt statt das Update abzubrechen
