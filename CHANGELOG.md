@@ -4,6 +4,30 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.11.0] – 2026-11-25
+
+**🔌 HobbyRadioPortal ohne Token.** Läuft das Portal auf demselben Rechner, verwaltet es APRS und DAPRS direkt – kein Token anlegen,
+kopieren und im Portal eintragen mehr. Ausführlich: [docs/de/sicherheit.md](docs/de/sicherheit.md#hobbyradioportal-auf-diesem-server-ohne-token).
+
+### Was sich ändert
+- **API-Tokens sind weg:** der Bereich *🔌 Portal-Zugang (API-Token)* unter Sessions, `GET/POST /api/admin/api-tokens`,
+  `DELETE /api/admin/api-tokens/{id}` und `python -m dashboard.auth api-token …`; die Tabelle `api_tokens` in `dashboard.db` wird beim Start
+  gelöscht. Unter Sessions steht stattdessen ein kurzer Hinweis, was das Portal darf.
+- **Als Portal gilt nur ein direkter Aufruf auf diesem Rechner:** Absender und `Host` Loopback (`127.0.0.1`, `::1`, `localhost`),
+  Kopfzeile `X-HobbyRadioPortal: 1`, **keine** Proxy-Kopfzeile (`X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `X-Forwarded-Host/-Proto`,
+  `Via`, `CF-Connecting-IP`, `True-Client-IP`, `X-Client-IP`). Anfragen über nginx/Caddy (die auch von 127.0.0.1 kommen) und von anderen
+  Rechnern sind damit nie „das Portal“. Die Proxy-Vorlagen in der Doku setzen `X-Forwarded-For` (Caddy macht es von selbst).
+- **Was das Portal darf, bleibt gleich:** öffentliche Daten, `/api/admin/settings` (ohne *Dashboard access*, *HTTPS & web*, *Updates*),
+  `/api/admin/aprs…`, `/api/admin/audit` – nie Benutzer, Sitzungen, Backups, Passwörter, Updates oder Neustarts. `X-Dashboard: 1`
+  (CSRF) bleibt Pflicht. Im Protokoll steht `portal (<Portal-Benutzer>)` statt `api:<Token-Name> (…)`.
+- **Abschalten:** `HB4_PORTAL_LOCAL=0` in der Umgebung des Dashboard-Dienstes (das Portal zeigt dann nur Live-Daten).
+
+### Doku und Tests
+- [Sicherheit](docs/de/sicherheit.md), [Adminbereich](docs/de/adminbereich.md), [Betrieb](docs/de/betrieb.md), [APRS](docs/de/aprs.md)
+  umgestellt; Screenshot *Sitzungen* neu.
+- `tests/test_portal_local.py` statt `test_api_tokens.py`: erlaubte und gesperrte Pfade, gesperrte Einstellungen, Proxy-Kopfzeilen und
+  öffentlicher Host abgelehnt, ohne Kennung oder von einem anderen Rechner kein Zugriff, CSRF bleibt, Protokoll, Abschalten.
+
 ## [1.10.0] – 2026-11-25
 
 **`scripts/update.sh` – Update mit einem Befehl, für die Konsole und das HobbyRadioPortal.** Das

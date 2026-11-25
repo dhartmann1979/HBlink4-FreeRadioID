@@ -48,21 +48,27 @@ Backup, Wiederherstellung und AutoBackup ([Backup](backup.md), [AutoBackup](auto
 
 Sitzungs-Cookie `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`; jede schreibende Anfrage braucht den Header `X-Dashboard` (CSRF-Schutz); fünf Fehlversuche sperren 15 Minuten. IP-Adressen sehen nur Admins.
 
-## API-Token für das HobbyRadioPortal
+## HobbyRadioPortal auf diesem Server (ohne Token)
 
-Seit 1.7.0 kann das [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) die APRS- und DAPRS-Einstellungen
-dieses Dashboards verwalten. Dafür legt ein Admin unter *Adminbereich → Sessions → Portal-Zugang* einen **API-Token** an
-(oder auf dem Server: `sudo -u hblink .venv/bin/python -m dashboard.auth api-token create HobbyRadioPortal --db dashboard/data/dashboard.db`).
+Das [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) verwaltet die APRS- und DAPRS-Einstellungen dieses
+Dashboards. Seit 1.11.0 gibt es dafür **keine API-Tokens** mehr (die Tabelle `api_tokens` wird beim Start gelöscht). Als Portal gilt
+nur ein **direkter Aufruf auf diesem Rechner**:
 
-- Der Token (`hb4p_…`, 256 Bit Zufall) wird **nur einmal angezeigt**; gespeichert ist nur sein SHA-256.
-- Er wird als `Authorization: Bearer …` geschickt und wirkt mit der Rolle **Admin**, nie Superadmin.
-- Er erreicht **nur**: alle öffentlichen `/api/`-Daten, `/api/admin/settings` (lesen, ändern, zurücksetzen), `/api/admin/aprs…`
-  (Status, Clients trennen, Neustart, Objekte, Passcode) und `/api/admin/audit`.
-- **Nie**: Benutzer, Sitzungen, Token, Backups, Anmeldung/Passwort, Updates, Neustarts – und die Einstellungen
-  *Dashboard access*, *HTTPS & web* und *Updates* sind für Token gesperrt.
-- Der CSRF-Schutz (`X-Dashboard: 1`) gilt auch für Token.
-- Jede Änderung steht im Protokoll als `api:<Name> (<Portal-Benutzer>)` – du siehst also auch, wer im Portal geklickt hat.
-- Zuletzt benutzt und letzte IP stehen in der Liste; **Beenden** widerruft sofort. Auf dem Server: `… dashboard.auth api-token list | revoke ID`.
+- Absender **und** `Host` sind Loopback (`127.0.0.1`, `::1`, `localhost`), Kopfzeile `X-HobbyRadioPortal: 1`,
+- **keine** Proxy-Kopfzeile (`X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `X-Forwarded-Host/-Proto`, `Via`, `CF-Connecting-IP`,
+  `True-Client-IP`, `X-Client-IP`). Anfragen über nginx/Caddy (die auch von 127.0.0.1 kommen) und von anderen Rechnern sind nie
+  „das Portal“ – **ein eigener Reverse-Proxy muss `X-Forwarded-For` setzen** (siehe unten, die Vorlage tut das).
+
+Was das Portal darf:
+
+- Rolle **Admin**, nie Superadmin; **nur** alle öffentlichen `/api/`-Daten, `/api/admin/settings` (lesen, ändern, zurücksetzen),
+  `/api/admin/aprs…` (Status, Clients trennen, Neustart, Objekte, Passcode) und `/api/admin/audit`.
+- **Nie**: Benutzer, Sitzungen, Backups, Anmeldung/Passwort, Updates, Neustarts – und die Einstellungen *Dashboard access*,
+  *HTTPS & web* und *Updates* sind gesperrt.
+- Der CSRF-Schutz (`X-Dashboard: 1`) gilt auch für das Portal.
+- Jede Änderung steht im Protokoll als `portal (<Portal-Benutzer>)`.
+- Jedes Programm auf diesem Rechner könnte sich als Portal ausgeben. Wer das nicht will: `HB4_PORTAL_LOCAL=0` in der Umgebung des
+  Dashboard-Dienstes (dann zeigt das Portal nur Live-Daten).
 
 ## Reverse-Proxy davor (empfohlen)
 

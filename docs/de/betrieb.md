@@ -164,11 +164,11 @@ Es liest dafür nur die öffentlichen Schnittstellen dieses Dashboards: `/api/ve
 Dashboard, IP-Adressen nur für Admins), `/api/aprs/status` und `/api/aprs/stations`. Im Portal unter
 *Admin → Dienste & Plugins* die Adresse eintragen (meist `http://127.0.0.1:8080/`).
 
-**APRS und DAPRS im Portal verwalten (seit 1.7.0):** Mit einem **API-Token** (*Adminbereich → Sessions → Portal-Zugang*) stellt das
-Portal unter *Admin → 🛰️ APRS & DAPRS* alles ein, was hier im Tab *📡 APRS* steht – APRS-Server, Uplink & Downlink, DAPRS (beide
+**APRS und DAPRS im Portal verwalten:** Läuft das Portal auf demselben Rechner, stellt es – **ohne Token** (seit 1.11.0) – unter
+*Admin → Dienste → APRS* alles ein, was hier im Tab *📡 APRS* steht – APRS-Server, Uplink & Downlink, DAPRS (beide
 Seiten: Erkennen im DMR-Server und Weitergabe an APRS), Repeater-Objekte, Karte, APRS-Domains – und zeigt die verbundenen Clients
 (trennen), Neustart, Objekte senden und den Passcode-Rechner. Das Portal nutzt dafür `/api/admin/settings` (nur die APRS-Bereiche)
-und `/api/admin/aprs…`. Was ein Token darf: [Sicherheit → API-Token](sicherheit.md#api-token-für-das-hobbyradioportal).
+und `/api/admin/aprs…`. Was das Portal darf: [Sicherheit → HobbyRadioPortal](sicherheit.md#hobbyradioportal-auf-diesem-server-ohne-token).
 
 ## Sicherung
 

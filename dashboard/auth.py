@@ -11,16 +11,13 @@ user        logged-in viewer (needed when auth.public_dashboard is false)
 Passwords are hashed with scrypt (stdlib). Sessions are random tokens; only
 their SHA-256 is stored, so a leaked database does not leak live sessions.
 
-API tokens (portal access)
---------------------------
-Long random tokens for services such as the HobbyRadioPortal (``Authorization: Bearer hb4p_…``).
-Only their SHA-256 is stored. A token acts with the role ``admin`` (never superadmin) and only on the
-paths in ``API_TOKEN_PATHS`` – no user, session, token or backup management.
+HobbyRadioPortal (since 1.11.0: no API tokens)
+----------------------------------------------
+The portal on the same machine acts with the role ``admin`` (never superadmin) and only on the paths in
+``server.PORTAL_PATHS`` – see ``server.portal_local()``. ``portal_user()`` is its pseudo user.
 
 CLI:
     python -m dashboard.auth hash-password     # prints a hash for config.json
-    python -m dashboard.auth api-token create NAME [--db PATH]
-    python -m dashboard.auth api-token list|revoke ID [--db PATH]
 """
 from __future__ import annotations
 
@@ -45,9 +42,6 @@ ROLES = ("superadmin", "admin", "user")
 ADMIN_ROLES = ("superadmin", "admin")
 USERNAME_RE = re.compile(r"^[A-Za-z0-9._@-]{2,40}$")
 MIN_PASSWORD_LEN = 8
-TOKEN_PREFIX = "hb4p_"
-TOKEN_NAME_RE = re.compile(r"^[A-Za-z0-9 ._@-]{2,40}$")
-MAX_API_TOKENS = 20
 
 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2 ** 14, 8, 1
 
@@ -74,16 +68,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_agent TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
-CREATE TABLE IF NOT EXISTS api_tokens (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    name       TEXT NOT NULL,
-    token_hash TEXT NOT NULL UNIQUE,
-    hint       TEXT NOT NULL DEFAULT '',
-    created_at REAL NOT NULL,
-    created_by TEXT NOT NULL DEFAULT '',
-    last_used  REAL,
-    last_ip    TEXT NOT NULL DEFAULT ''
-);
+DROP TABLE IF EXISTS api_tokens;   -- until 1.10: tokens for the HobbyRadioPortal (now: same server, no token)
 CREATE TABLE IF NOT EXISTS audit (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,
     ts       REAL NOT NULL,
@@ -421,51 +406,13 @@ class AuthStore:
         self._x("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new), user["id"]))
         self.audit("password_changed", user["username"], "", ip)
 
-    # -- API tokens (portal access) ------------------------------------
-    def create_api_token(self, name: str, created_by: str = "", ip: str = "") -> Dict[str, Any]:
-        name = (name or "").strip()
-        if not TOKEN_NAME_RE.match(name):
-            raise AuthError("Name: 2–40 letters, digits, spaces or . _ @ -")
-        if self._q("SELECT COUNT(*) AS n FROM api_tokens")[0]["n"] >= MAX_API_TOKENS:
-            raise AuthError(f"At most {MAX_API_TOKENS} tokens.")
-        token = TOKEN_PREFIX + secrets.token_urlsafe(32)
-        cur = self._x("INSERT INTO api_tokens (name, token_hash, hint, created_at, created_by) VALUES (?,?,?,?,?)",
-                      (name, _token_hash(token), token[-4:], time.time(), created_by))
-        self.audit("api_token_created", created_by, name, ip)
-        info = self._token_info(self._q("SELECT * FROM api_tokens WHERE id=?", (cur.lastrowid,))[0])
-        return dict(info, token=token)
-
+    # -- HobbyRadioPortal on this server -------------------------------
     @staticmethod
-    def _token_info(row: sqlite3.Row) -> Dict[str, Any]:
-        return {"id": row["id"], "name": row["name"], "hint": row["hint"], "created_at": row["created_at"],
-                "created_by": row["created_by"], "last_used": row["last_used"], "last_ip": row["last_ip"]}
-
-    def list_api_tokens(self) -> List[Dict[str, Any]]:
-        return [self._token_info(r) for r in self._q("SELECT * FROM api_tokens ORDER BY id")]
-
-    def revoke_api_token(self, token_id: int, actor: str = "", ip: str = "") -> None:
-        rows = self._q("SELECT name FROM api_tokens WHERE id=?", (int(token_id),))
-        if not rows:
-            raise AuthError("Token not found.")
-        self._x("DELETE FROM api_tokens WHERE id=?", (int(token_id),))
-        self.audit("api_token_revoked", actor, rows[0]["name"], ip)
-
-    def token_user(self, token: Optional[str], ip: str = "", on_behalf: str = "") -> Optional[Dict[str, Any]]:
-        """The pseudo user of a valid API token (role admin) or None."""
-        if not token or not token.startswith(TOKEN_PREFIX) or len(token) > 100:
-            return None
-        rows = self._q("SELECT * FROM api_tokens WHERE token_hash=?", (_token_hash(token),))
-        if not rows:
-            return None
-        row = rows[0]
-        now = time.time()
-        if not row["last_used"] or now - row["last_used"] > 60 or row["last_ip"] != ip:
-            self._x("UPDATE api_tokens SET last_used=?, last_ip=? WHERE id=?", (now, ip, row["id"]))
+    def portal_user(on_behalf: str = "") -> Dict[str, Any]:
+        """Pseudo user (role admin) of the HobbyRadioPortal on this server (see server.portal_local)."""
         who = re.sub(r"[^A-Za-z0-9._@-]", "", on_behalf or "")[:40]
-        name = f"api:{row['name']}" + (f" ({who})" if who else "")
-        return {"id": -row["id"], "username": name, "role": "admin", "display_name": row["name"], "dmr_id": None,
-                "disabled": False, "from_config": False, "created_at": row["created_at"], "last_login": row["last_used"],
-                "api": True}
+        return {"id": 0, "username": "portal" + (f" ({who})" if who else ""), "role": "admin", "display_name": "HobbyRadioPortal",
+                "dmr_id": None, "disabled": False, "from_config": False, "created_at": 0, "last_login": None, "api": True}
 
     def audit_log(self, limit: int = 200) -> List[Dict[str, Any]]:
         return [dict(r) for r in self._q("SELECT ts, username, action, detail, ip FROM audit "
@@ -496,36 +443,7 @@ def _cli(argv: List[str]) -> int:
             return 1
         print(hash_password(pw))
         return 0
-    if len(argv) >= 3 and argv[1] == "api-token":
-        args = argv[2:]
-        db = Path(__file__).parent / "data" / "dashboard.db"
-        if "--db" in args:
-            i = args.index("--db")
-            db = Path(args[i + 1])
-            args = args[:i] + args[i + 2:]
-        store = AuthStore(db)
-        if args[0] == "create" and len(args) == 2:
-            try:
-                t = store.create_api_token(args[1], "cli")
-            except AuthError as e:
-                print(e, file=sys.stderr)
-                return 1
-            print(t["token"])
-            return 0
-        if args[0] == "list":
-            for t in store.list_api_tokens():
-                used = time.strftime("%Y-%m-%d %H:%M", time.localtime(t["last_used"])) if t["last_used"] else "never"
-                print(f"{t['id']:>3}  {t['name']:<30} …{t['hint']}  last used {used}")
-            return 0
-        if args[0] == "revoke" and len(args) == 2 and args[1].isdigit():
-            try:
-                store.revoke_api_token(int(args[1]), "cli")
-            except AuthError as e:
-                print(e, file=sys.stderr)
-                return 1
-            return 0
-    print("usage: python -m dashboard.auth hash-password\n"
-          "       python -m dashboard.auth api-token create NAME | list | revoke ID [--db PATH]", file=sys.stderr)
+    print("usage: python -m dashboard.auth hash-password", file=sys.stderr)
     return 2
 
 

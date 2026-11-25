@@ -3628,16 +3628,9 @@
         }
 
         async function adminSessions() {
-            const [{ sessions }, tk] = await Promise.all([api('GET', '/api/admin/sessions'), api('GET', '/api/admin/api-tokens')]);
-            const tokens = `<div class="set-panel" style="margin-top:18px"><h3 class="set-panel-title">🔌 Portal access (API tokens)</h3>
-                <p class="set-panel-help">For the HobbyRadioPortal and other services: they manage the APRS and DAPRS settings with the role admin – never users, sessions, tokens, backups, access, HTTPS or updates. The token is shown only once; enter it in the portal under Services &amp; plugins → APRS → API token.</p>
-                ${tk.tokens.length ? `<table class="admin-table"><thead><tr><th>Name</th><th>Token</th><th>Created</th><th>Last used</th><th>IP</th><th></th></tr></thead>
-                <tbody>${tk.tokens.map(t => `<tr><td><b>${escapeHtml(t.name)}</b></td><td><code>hb4p_…${escapeHtml(t.hint)}</code></td>
-                    <td>${fmtTime(t.created_at)}${t.created_by ? ' · ' + escapeHtml(t.created_by) : ''}</td><td>${t.last_used ? fmtTime(t.last_used) : '—'}</td>
-                    <td><code>${escapeHtml(t.last_ip || '')}</code></td>
-                    <td class="actions"><button class="btn-s danger" onclick="revokeApiToken(${t.id})">Revoke</button></td></tr>`).join('')}</tbody></table>` : '<div class="muted">No tokens yet.</div>'}
-                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input id="tkName" class="input" placeholder="Name, e.g. HobbyRadioPortal" maxlength="40" style="flex:1;min-width:200px">
-                <button class="btn-s" onclick="createApiToken()">➕ Create token</button></div><div id="tkNew"></div></div>`;
+            const { sessions } = await api('GET', '/api/admin/sessions');
+            const tokens = `<div class="set-panel" style="margin-top:18px"><h3 class="set-panel-title">🔌 HobbyRadioPortal</h3>
+                <p class="set-panel-help">No token needed: an HobbyRadioPortal on this server manages the APRS and DAPRS settings directly – never users, sessions, backups, access, HTTPS or updates. Requests through a proxy or from other machines never count as the portal. Switch off: HB4_PORTAL_LOCAL=0 in the dashboard service.</p></div>`;
             if (!sessions.length) return '<div class="muted">No active sessions.</div>' + tokens;
             return `<table class="admin-table">
                 <thead><tr><th>User</th><th>IP</th><th>Browser</th><th>Last active</th><th>Expires</th><th></th></tr></thead>
@@ -3647,23 +3640,6 @@
                     <td>${fmtTime(s.last_seen)}</td><td>${fmtTime(s.expires_at)}</td>
                     <td class="actions"><button class="btn-s danger" onclick="revokeSession('${s.id}')">Revoke</button></td>
                 </tr>`).join('')}</tbody></table>` + tokens;
-        }
-
-        async function createApiToken() {
-            const name = (document.getElementById('tkName').value || '').trim() || 'HobbyRadioPortal';
-            try {
-                const { token } = await api('POST', '/api/admin/api-tokens', { name });
-                await adminTab('sessions');
-                document.getElementById('tkNew').innerHTML = `<div class="tab-intro" style="margin-top:10px"><b>Copy the token now – it is shown only once:</b>
-                    <div style="display:flex;gap:8px;margin-top:6px"><input class="input" readonly value="${escapeHtml(token.token)}" style="flex:1;font-family:monospace" onclick="this.select()">
-                    <button class="btn-s" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);toast('Copied','ok')">📋 Copy</button></div></div>`;
-            } catch (e) { toast(e.message, 'err'); }
-        }
-
-        async function revokeApiToken(id) {
-            if (!confirm('Revoke this token? The service loses access at once.')) return;
-            try { await api('DELETE', `/api/admin/api-tokens/${id}`); toast('Token revoked', 'ok'); adminTab('sessions'); }
-            catch (e) { toast(e.message, 'err'); }
         }
 
         async function revokeSession(id) {

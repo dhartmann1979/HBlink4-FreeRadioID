@@ -290,11 +290,9 @@ Die genaue Umsetzung steht in [Anleitungen → Umziehen](anleitungen.md#2-von-hb
 </p>
 
 - **Sessions**: alle Anmeldungen mit IP, Browser und Ablauf; jede lässt sich beenden.
-- **🔌 Portal-Zugang (API-Token)** (unter Sessions, seit 1.7.0): Token für das [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal)
-  und andere Dienste. *Name eintragen → ➕ Token anlegen*, den Token **sofort kopieren** (er wird nur einmal angezeigt) und im Portal
-  unter *Dienste & Plugins → APRS → API-Token* eintragen. Die Liste zeigt Name, die letzten vier Zeichen, wer ihn wann angelegt hat
-  und wann/von wo er zuletzt benutzt wurde. **Beenden** widerruft ihn sofort. Was ein Token darf, steht unter
-  [Sicherheit → API-Token](sicherheit.md#api-token-für-das-hobbyradioportal).
+- **🔌 HobbyRadioPortal** (unter Sessions): Seit 1.11.0 gibt es **keine API-Tokens** mehr. Ein
+  [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) auf **demselben Rechner** verwaltet APRS und DAPRS direkt –
+  nichts anlegen, nichts kopieren. Was es darf und wann ein Aufruf als Portal gilt: [Sicherheit → HobbyRadioPortal](sicherheit.md#hobbyradioportal-auf-diesem-server-ohne-token).
 - **Log**: Anmeldungen, Fehlversuche, Benutzer- und Einstellungsänderungen, Neustarts, jeweils mit Zeit, Person und IP.
 - **System**: HTTPS mit Ablaufdatum des Zertifikats, Zugriff, Verbindung zum DMR-Server, FreeRadioID-IDs und gespeicherte Avatare. Dazu die Knöpfe **Restart dashboard** und **Restart DMR server**; sie erscheinen nur, wenn beides als systemd-Dienst läuft.
 - **⬆️ Updates** (im Tab System): installiert, Stand auf GitHub, zuletzt geprüft, letztes Update (erfolgreich oder zurückgenommen), Branch, Art des Neustarts und ob du installieren darfst. **↻ Jetzt prüfen** fragt sofort nach, **⬆️ Update jetzt installieren** installiert.
