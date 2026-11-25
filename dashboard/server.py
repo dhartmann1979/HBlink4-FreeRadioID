@@ -1588,6 +1588,17 @@ async def admin_crashes_ack(request: Request):
     ids = b.get("ids") if isinstance(b.get("ids"), list) else []
     return await asyncio.to_thread(_n8().crash_ack, [str(i) for i in ids][:500], bool(b.get("all")))
 
+@app.post("/api/admin/crashes/delete")
+async def admin_crashes_delete(request: Request):
+    _require_admin(request)
+    try:
+        b = await request.json()
+    except ValueError:
+        b = {}
+    b = b if isinstance(b, dict) else {}
+    ids = b.get("ids") if isinstance(b.get("ids"), list) else []
+    return await asyncio.to_thread(_n8().crash_delete, [str(i) for i in ids][:500], bool(b.get("all")))
+
 
 @app.get("/api/admin/keepalive")
 async def admin_keepalive(request: Request):

@@ -155,6 +155,10 @@ DMR-Server (`hblink4.service`) und Dashboard (`hblink4-dash.service`).
 erscheinen **nach der Anmeldung als Hinweisfenster** und als roter Zähler im Menü, bis sie als gelesen markiert sind.
 Konsole: `sudo scripts/n8-admin.sh crashes`. Dateien: `crashes.jsonl` (letzte 300), `crash/<id>.log`, `crash/ack.json`, `crashwatch.json`.
 
+**Bereinigen:** In jedem aufgeklappten Befund löscht **🗑 Diesen Befund löschen** ihn samt Protokoll, unten **🗑 Alle löschen**
+(mit Rückfrage) alle – ist oben nach einem Dienst gefiltert, heißt der Knopf **🗑 Angezeigte löschen** und löscht nur diese.
+Auf der Konsole: `sudo …/scripts/n8-admin.sh crashes-clear`. Die laufende Faulthandler-Datei (`crash/fault-*.log`) bleibt.
+
 ### Schutz gegen Angriffe von außen
 
 - **Wer überhaupt drankommt:** Update now ist nur nach Login und nur für die eingestellte Rolle erreichbar (Standard: Superadmin), und auch dann nur mit erneuter Passworteingabe. Fehlversuche werden wie beim Login gebremst und protokolliert.

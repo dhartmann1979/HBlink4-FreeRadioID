@@ -4,6 +4,16 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.15.3] – 2026-11-25
+
+### 🗑 Abstürze bereinigen – in allen N8-Systemen
+- **Admin → System → 💥 Abstürze**: jeder aufgeklappte Befund hat **🗑 Diesen Befund löschen**, unten gibt es **🗑 Alle löschen**
+  (bzw. **🗑 Angezeigte löschen**, wenn nach einem Dienst gefiltert ist) – jeweils mit Rückfrage. Gelöscht werden der Eintrag in
+  `crashes.jsonl` und das Protokoll `crash/<id>.log`; bei „Alle“ auch Reste und der Gelesen-Stand. Die laufende
+  Faulthandler-Datei bleibt. Neue Befunde danach zählen wieder als neu.
+- Neue Adresse `POST /api/admin/crashes/delete` (`{"all": true}` oder `{"ids": [...]}`), Konsole `n8-admin.sh crashes-clear`.
+- Gemeinsame Bausteine `n8_admin.py`, N8 Kit 1.4.2 (`n8-kit.js`) und `n8-admin.sh` – gleich in allen N8-Systemen; Test `tests/test_crash_delete.py`.
+
 ## [1.15.2] – 2026-11-25
 
 ### 🐛 Update-Fenster: „Nicht aktualisiert“ statt fälschlich „zurückgenommen“
