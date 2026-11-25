@@ -4,6 +4,20 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.12.4] – 2026-11-25
+
+### 🐛 Fix: Dashboard startet nach dem Umstellen auf das N8 Admin-Kit nicht mehr (Neustart-Schleife)
+- Die Startprüfung des Dashboards (`_ensure_writable`) verlangte, dass **jede** Datei im Datenordner für den Dienst-Benutzer
+  schreibbar ist. `update.log` und `update.result` schreibt „Update jetzt“ aber bewusst **als root** (der Dashboard liest sie nur).
+  Folge: „The dashboard (running as adn) cannot write these files: …/update.result (owner: root)“, `exit 1`, systemd startet neu –
+  dutzende Neustarts, und die Prüfung nach dem Update hielt das Dashboard (zu Recht) für tot.
+- Diese Dateien (und die des Keep-Alive) sind jetzt ausgenommen. Der Hinweis zur Abhilfe nennt `sudo scripts/n8-admin.sh fix-perms`
+  statt `chown -R … /opt/HBlink4` (das hätte das Programm wieder dem Dienst gegeben).
+- Test `tests/test_n8_admin_kit.py`.
+
+> Sofort-Abhilfe ohne Update: `sudo chown adn:adn /opt/HBlink4/dashboard/data/update.* && sudo systemctl restart hblink4-dash`
+> (Benutzer = der aus `User=` in `hblink4-dash.service`).
+
 ## [1.12.3] – 2026-11-25
 
 ### 🐛 Fix: „Version … antwortet nicht – zurück auf …“ bei jedem Update

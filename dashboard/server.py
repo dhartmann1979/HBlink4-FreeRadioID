@@ -177,6 +177,9 @@ def _ensure_writable(data_dir: Path) -> None:
     if not os.access(data_dir, os.W_OK):
         bad.append(data_dir)
     for f in data_dir.iterdir() if data_dir.is_dir() else []:
+        # update.log/update.result schreibt n8-admin.sh als root („Update jetzt“) – der Dashboard liest sie nur
+        if f.name in ("update.log", "update.result", "keepalive.json", "keepalive.log", "keepalive.state"):
+            continue
         if f.is_file() and not os.access(f, os.W_OK):
             bad.append(f)
     if not bad:
@@ -195,7 +198,8 @@ def _ensure_writable(data_dir: Path) -> None:
             owner = "?"
         logger.error(f"     {f}  (owner: {owner})")
     logger.error("   They were probably created by a start as root. Fix (as root):")
-    logger.error(f"     chown -R {me}:{me} {root}")
+    fix = root / "scripts" / "n8-admin.sh"
+    logger.error(f"     sudo {fix} fix-perms" if fix.exists() else f"     chown -R {me}:{me} {data_dir}")
     logger.error("   and from now on start only the services (systemctl), or run_all.sh as that user.")
     sys.exit(1)
 
