@@ -3,6 +3,10 @@
 N8Kit.i18n.add({
     base: 'en',
     de: {
+        // 1.13.0: admin menu tree and System views (N8 Kit 1.1)
+        'Server & HTTPS': 'Server & HTTPS', 'HTTPS': 'HTTPS', 'Access': 'Zugang', 'Sessions': 'Sitzungen', 'GitHub not reachable': 'GitHub nicht erreichbar',
+        'State of HTTPS, access and the DMR server, plus restart buttons. Update, services, permissions and keep-alive are the next entries of the menu':
+            'Zustand von HTTPS, Zugang und DMR-Server, dazu die Neustart-Knöpfe. Update, Dienste, Berechtigungen und Keep-Alive sind die nächsten Einträge im Menü',
         // 1.13.0: Keep-Alive
         "Every minute as root: checks the dashboard, the DMR server (UDP port, link to the dashboard) and APRS (server and uplink) for real, restarts sick services after 3 minutes (at most 4× per hour), notices internet outages and restarts the network services afterwards, and reports to a heartbeat address (Uptime Kuma “push”, Healthchecks.io …). A service stopped here stays stopped.":
             "Jede Minute als root: prüft Dashboard, DMR-Server (UDP-Port, Verbindung zum Dashboard) und APRS (Server und Uplink) wirklich, startet kranke Dienste nach 3 Minuten neu (höchstens 4× je Stunde), erkennt Internet-Ausfälle und startet danach die Netzdienste neu, und meldet sich bei einer Heartbeat-Adresse (Uptime Kuma „Push“, Healthchecks.io …). Ein hier gestoppter Dienst bleibt gestoppt.",
