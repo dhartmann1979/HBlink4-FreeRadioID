@@ -781,7 +781,7 @@
                 paint(card('🔑 Sitzungen', `<p class="n8-help">${esc(t('Alle aktuellen Anmeldungen. Mit „Abmelden“ ist das Gerät sofort abgemeldet.'))}</p>
                     ${!list.length ? `<div class="n8-help">${esc(t('Keine aktiven Sitzungen.'))}</div>` : `<table class="n8-tbl"><thead><tr><th>${esc(t('Benutzer'))}</th><th>IP</th><th>Browser</th><th>${esc(t('Zuletzt aktiv'))}</th><th>${esc(t('Läuft ab'))}</th><th></th></tr></thead>
                     <tbody>${list.map((x, i) => `<tr><td><b>${esc(x.username)}</b> ${x.role ? role(x.role) : ''}${x.current ? ` <span class="n8-badge ok">${esc(t('diese Sitzung'))}</span>` : ''}</td>
-                        <td><code>${esc(x.ip || '–')}</code></td><td>${esc(shortUA(x.user_agent))}</td><td>${esc(ago(x.last_seen))}</td><td>${esc(ago(x.expires_at))}</td>
+                        <td><code>${esc(x.ip || '–')}</code></td><td>${esc(shortUA(x.user_agent))}</td><td>${esc(ago(x.last_seen || x.created_at))}</td><td>${esc(ago(x.expires_at))}</td>
                         <td class="n8-act">${x.id ? `<button type="button" class="n8-btn sm danger" data-rev="${i}">${esc(t('Abmelden'))}</button>` : ''}</td></tr>`).join('')}</tbody></table>`}`));
                 el.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
                     try { await A.revoke(list[b.dataset.rev]); toast(t('Sitzung beendet')); load(); } catch (x) { toast(x.message, true); }

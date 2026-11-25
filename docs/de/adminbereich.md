@@ -44,8 +44,8 @@ und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 
 | Gruppe | Einträge |
 |---|---|
-| 📡 **Betrieb** | ⚙️ Einstellungen (Zweige: Abschnitte des Dashboards) · 🛰️ DMR-Server (Zweige: Abschnitte für HBlink4) · ↔️ OpenBridge · 📡 APRS (Zweige: Übersicht, Server, Uplink & Downlink, DAPRS, DMR → APRS, Karte, Domains) · 📥 Import · 📜 Protokoll |
-| 👥 **Benutzer & Zugang** | 👥 Benutzer · 🔑 Sitzungen |
+| 📡 **Betrieb** | ⚙️ Einstellungen (Zweige: Abschnitte des Dashboards) · 🛰️ DMR-Server (Zweige: Abschnitte für HBlink4) · ↔️ OpenBridge · 📡 APRS (Zweige: Übersicht, Server, Uplink & Downlink, DAPRS, DMR → APRS, Karte, Domains) · 📥 Import |
+| 👥 **Benutzer & Zugang** | 👥 Benutzer · 🔑 Sitzungen · 📜 Protokoll |
 | 🎨 **Darstellung** | 🎨 Aussehen · 🔗 Links |
 | 🌐 **Netz, Ports & Domains** | 🔌 Ports · 🔒 Domains & HTTPS |
 | 🖥️ **System** | 🖥️ Server · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💥 Abstürze · 💾 Backup |

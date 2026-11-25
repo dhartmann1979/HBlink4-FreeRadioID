@@ -1859,6 +1859,8 @@ async def admin_restart(request: Request):
         raise _HTTPError(400, "Only possible when the dashboard runs as a systemd service (Restart=always).")
     state.auth.audit("restart", actor["username"], "", _client_ip(request))
     import signal as _signal
+    from .n8_crash import mark_planned
+    mark_planned(str(state._data_dir), "hblink4-dash.service", "Neustart aus dem Adminbereich")   # kein „Absturz“ im Absturz-Wächter
     asyncio.get_running_loop().call_later(0.5, os.kill, os.getpid(), _signal.SIGTERM)
     return {"ok": True}
 
@@ -1984,6 +1986,8 @@ async def admin_domains(request: Request):
 def _restart_soon() -> None:
     if os.environ.get("INVOCATION_ID"):
         import signal as _signal
+        from .n8_crash import mark_planned
+        mark_planned(str(state._data_dir), "hblink4-dash.service", "HTTPS/Domain geändert")
         asyncio.get_running_loop().call_later(1.0, os.kill, os.getpid(), _signal.SIGTERM)
 
 

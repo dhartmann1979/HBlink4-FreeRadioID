@@ -18,6 +18,8 @@ Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
   `POST /api/admin/domains/<domain>/renew`, `DELETE /api/admin/domains/<domain>`, `POST /api/admin/domains/options`.
 
 ### 👥 Benutzer & Zugang – jetzt die gemeinsame Vorlage für alle N8-Systeme
+- **📜 Protokoll** steht jetzt mit unter *Benutzer & Zugang* (vorher unter *Betrieb*) – so in allen N8-Systemen: 👥 Benutzer · 🔑 Sitzungen · 📜 Protokoll.
+- Der Neustart-Knopf (und das Umschalten von HTTPS) wird beim Absturz-Wächter als geplant gemeldet und erscheint nicht mehr als Absturz.
 - **👥 Benutzer** und **🔑 Sitzungen** sehen aus wie bisher und sind jetzt die Ansicht des N8 Kit 1.4 (`N8Kit.access.view`), die
   ADN-FRN-Server, N8 Hotspot, HobbyRadioPortal und N8 Crosslink genauso nutzen. Deutsch als Grundsprache, Englisch umschaltbar.
 
