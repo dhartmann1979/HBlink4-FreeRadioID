@@ -11,10 +11,7 @@ user        logged-in viewer (needed when auth.public_dashboard is false)
 Passwords are hashed with scrypt (stdlib). Sessions are random tokens; only
 their SHA-256 is stored, so a leaked database does not leak live sessions.
 
-HobbyRadioPortal (since 1.11.0: no API tokens)
-----------------------------------------------
-The portal on the same machine acts with the role ``admin`` (never superadmin) and only on the paths in
-``server.PORTAL_PATHS`` – see ``server.portal_local()``. ``portal_user()`` is its pseudo user.
+No API tokens and no portal access: every admin call needs a session (since 1.12.0).
 
 CLI:
     python -m dashboard.auth hash-password     # prints a hash for config.json
@@ -408,12 +405,6 @@ class AuthStore:
 
     # -- HobbyRadioPortal on this server -------------------------------
     @staticmethod
-    def portal_user(on_behalf: str = "") -> Dict[str, Any]:
-        """Pseudo user (role admin) of the HobbyRadioPortal on this server (see server.portal_local)."""
-        who = re.sub(r"[^A-Za-z0-9._@-]", "", on_behalf or "")[:40]
-        return {"id": 0, "username": "portal" + (f" ({who})" if who else ""), "role": "admin", "display_name": "HobbyRadioPortal",
-                "dmr_id": None, "disabled": False, "from_config": False, "created_at": 0, "last_login": None, "api": True}
-
     def audit_log(self, limit: int = 200) -> List[Dict[str, Any]]:
         return [dict(r) for r in self._q("SELECT ts, username, action, detail, ip FROM audit "
                                           "ORDER BY id DESC LIMIT ?", (limit,))]

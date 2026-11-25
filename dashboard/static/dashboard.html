@@ -2507,12 +2507,6 @@
             .status-strip .hdr-sl { display: inline !important; }
         }
         .hdr-sl { display: none; }
-            .mig-card { border-left: 3px solid #0a84ff; }
-        .mig-facts { margin: 8px 0 10px 18px; line-height: 1.7; font-size: 13.5px; }
-        .mig-new { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(48,209,88,.1); border: 1px solid rgba(48,209,88,.45); }
-        .mig-secret { display: inline-block; font-size: 15px; padding: 6px 10px; border-radius: 8px; background: rgba(0,0,0,.35); user-select: all; word-break: break-all; }
-        .mig-codes { width: 100%; margin-top: 10px; font-size: 12.5px; border-collapse: collapse; }
-        .mig-codes th, .mig-codes td { text-align: left; padding: 5px 6px; border-top: 1px solid rgba(255,255,255,.07); }
 </style>
 </head>
 <body>
@@ -3262,7 +3256,7 @@
         async function adminBackup() {
             backupPreview = null;
             if (state.me.role !== 'superadmin') return '<p>Vollständige Backups enthalten alle Zugangsdaten. Dieser Bereich ist dem Superadmin vorbehalten.</p>';
-            const [st, auto, mig] = await Promise.all([api('GET', '/api/admin/backup'), api('GET', '/api/admin/autobackup'), api('GET', '/api/admin/migration').catch(() => null)]);
+            const [st, auto] = await Promise.all([api('GET', '/api/admin/backup'), api('GET', '/api/admin/autobackup')]);
             const busy = st.busy || ['queued', 'running'].includes(st.restore.state);
             return `<div class="backup-panel"><div class="tab-intro"><h3 class="set-panel-title">💾 Backup</h3>
                 <p class="set-panel-help">Sichere deine HBlink4-Installation und übertrage sie auf einen anderen HBlink4-Server.
@@ -3272,7 +3266,6 @@
                     Python-Umgebungen werden auf dem Ziel neu erstellt. Betriebssystem, Firewall und DNS gehören nicht zum Backup.</p>
                     <button class="btn-s btn-primary" onclick="createFullBackup(this)" ${busy ? 'disabled' : ''}>💾 Backup erstellen und herunterladen</button>
                     <p id="backupCreateProgress" role="status" aria-live="polite"></p></div>
-                ${mig ? migrationHtml(mig, busy) : ''}
                 <div class="ap-card"><h3>Gespeicherte Backups</h3>
                     ${st.archives.length ? '<ul>' + st.archives.map(a => `<li>${escapeHtml(new Date(a.created_at * 1000).toLocaleString())} · ${backupSize(a.size)} ·
                         <a href="/api/admin/backup/download/${encodeURIComponent(a.name)}" download>${escapeHtml(a.name.startsWith('before-restore-') ? 'Automatische Sicherung vor Wiederherstellung' : a.name.endsWith('.age') ? 'Verschlüsseltes AutoBackup herunterladen' : 'Backup herunterladen')}</a>
@@ -3303,42 +3296,6 @@
                     <p id="backupRestoreProgress" role="status" aria-live="polite">${escapeHtml(st.restore.message || '')}</p>
                     <button class="btn-s" onclick="adminTab('backup')">⟳ Aktualisieren</button>
                 </div></div>`;
-        }
-        // ---- Umzug ins HobbyRadioPortal: Einmal-Code, mit dem der Web-Installer des Portals alles abholt
-        function migrationHtml(m, busy) {
-            const i = m.info || {}, active = (m.codes || []).filter(c => c.state === 'active');
-            const when = t => new Date(t * 1000).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'de-DE', { dateStyle: 'short', timeStyle: 'short' });
-            const st = { active: 'gültig', used: 'aufgebraucht', expired: 'abgelaufen', revoked: 'widerrufen' };
-            return `<div class="ap-card mig-card"><h3>📦 Umzug ins HobbyRadioPortal</h3>
-                <p>Ziehst du HBlink4 auf den Server des <b>HobbyRadioPortals</b> um, holt sich dessen Web-Installer alles selbst:
-                Programm, Einstellungen, Benutzer, Zugangsdaten, Datenbanken und APRS – wie ein Backup, nur ohne Datei hin und her.
-                Du gibst dort nur die Adresse dieses Dashboards und einen <b>Umzugscode</b> ein.</p>
-                <ul class="mig-facts"><li>Version <b>${escapeHtml(i.version || '')}</b> · ${i.users || 0} Benutzer · ${i.rules || 0} Repeater-Regeln · ${i.obp || 0} OpenBridge · APRS ${i.aprs ? 'an' : 'aus'}</li>
-                    <li>Domains: ${(i.domains || []).map(d => `<code>${escapeHtml(d.domain)}</code>`).join(', ') || 'keine'} – das Portal richtet sie mit Let's Encrypt neu ein</li>
-                    <li>Ports auf dem neuen Server: ${(i.ports || []).map(p => `${p.port}/${p.proto.toUpperCase()} (${escapeHtml(p.what)})`).join(', ')}</li>
-                    <li>Im Umzugspaket ist das eigene HTTPS von HBlink4 ausgeschaltet (das macht dort nginx des Portals). <b>Dieser Server bleibt unverändert</b>, bis du ihn abschaltest.</li></ul>
-                ${m.https ? '' : '<p class="form-error">Du bist über HTTP verbunden. Der Code wird gleich im Klartext angezeigt – besser über HTTPS oder einen SSH-Tunnel anlegen. Das Paket selbst ist immer verschlüsselt.</p>'}
-                <button class="btn-s btn-primary" onclick="createMigrationCode(this)" ${busy ? 'disabled' : ''}>➕ Umzugscode anlegen</button>
-                <div id="migCode" role="status" aria-live="polite"></div>
-                ${(m.codes || []).length ? `<table class="mig-codes"><thead><tr><th>Code</th><th>Angelegt</th><th>Gültig bis</th><th>Abrufe</th><th>Zustand</th><th></th></tr></thead><tbody>
-                    ${m.codes.slice(0, 6).map(c => `<tr><td><code>hb4m_${escapeHtml(c.id)}.…</code></td><td>${escapeHtml(when(c.created_at))} · ${escapeHtml(c.created_by || '')}</td>
-                        <td>${escapeHtml(when(c.expires_at))}</td><td>${c.uses}/${c.max_uses}${c.last_ip ? ' · ' + escapeHtml(c.last_ip) : ''}</td><td>${st[c.state] || c.state}</td>
-                        <td>${c.state === 'active' ? `<button class="btn-s" onclick="revokeMigrationCode('${escapeHtml(c.id)}')">Widerrufen</button>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}
-                <p class="muted">Ein Code gilt ${m.ttl_hours} Stunden und für höchstens ${m.max_uses} Abrufe. Anleitung: <a href="https://github.com/dhartmann1979/HobbyRadioPortal/blob/main/docs/UMZUG.md" target="_blank" rel="noopener">Umzug ins Portal</a>.</p></div>`;
-        }
-        async function createMigrationCode(btn) {
-            btn.disabled = true;
-            try {
-                const c = await api('POST', '/api/admin/migration/code', {});
-                const box = document.getElementById('migCode');
-                box.innerHTML = `<div class="mig-new"><p>🔑 <b>Umzugscode</b> – jetzt kopieren, er wird nur einmal angezeigt (gültig bis ${escapeHtml(new Date(c.expires_at * 1000).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'de-DE', { dateStyle: 'short', timeStyle: 'short' }))}):</p>
-                    <code class="mig-secret">${escapeHtml(c.code)}</code> <button class="btn-s" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(() => toast('Kopiert', 'ok'))">📋 Kopieren</button>
-                    <p>Im Web-Installer des Portals (<code>/setup</code>) im Schritt <b>📡 DMR &amp; APRS</b>: Adresse dieses Dashboards (${escapeHtml(location.origin)}) und diesen Code eintragen.</p></div>`;
-            } catch (e) { toast(e.message, 'err'); } finally { btn.disabled = false; }
-        }
-        async function revokeMigrationCode(id) {
-            try { await api('DELETE', '/api/admin/migration/code/' + id); toast('Umzugscode widerrufen', 'ok'); adminTab('backup'); }
-            catch (e) { toast(e.message, 'err'); }
         }
         async function deleteFullBackup(btn) {
             const name = btn.dataset.backupName;
@@ -3629,8 +3586,7 @@
 
         async function adminSessions() {
             const { sessions } = await api('GET', '/api/admin/sessions');
-            const tokens = `<div class="set-panel" style="margin-top:18px"><h3 class="set-panel-title">🔌 HobbyRadioPortal</h3>
-                <p class="set-panel-help">No token needed: an HobbyRadioPortal on this server manages the APRS and DAPRS settings directly – never users, sessions, backups, access, HTTPS or updates. Requests through a proxy or from other machines never count as the portal. Switch off: HB4_PORTAL_LOCAL=0 in the dashboard service.</p></div>`;
+            const tokens = '';
             if (!sessions.length) return '<div class="muted">No active sessions.</div>' + tokens;
             return `<table class="admin-table">
                 <thead><tr><th>User</th><th>IP</th><th>Browser</th><th>Last active</th><th>Expires</th><th></th></tr></thead>

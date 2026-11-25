@@ -64,12 +64,10 @@ N8Kit.i18n.add({
         'Configuration tab': 'Tab Konfiguration', 'Setup tab': 'Tab Einrichtung',
 
         // admin: general
-        'No token needed: an HobbyRadioPortal on this server manages the APRS and DAPRS settings directly – never users, sessions, backups, access, HTTPS or updates. Requests through a proxy or from other machines never count as the portal. Switch off: HB4_PORTAL_LOCAL=0 in the dashboard service.': 'Kein Token nötig: ein HobbyRadioPortal auf diesem Server verwaltet die APRS- und DAPRS-Einstellungen direkt – nie Benutzer, Sitzungen, Backups, Zugang, HTTPS oder Updates. Anfragen über einen Proxy oder von anderen Rechnern gelten nie als Portal. Abschalten: HB4_PORTAL_LOCAL=0 im Dashboard-Dienst.',
         'Portal access (API tokens)': 'Portal-Zugang (API-Token)', 'Create token': 'Token anlegen', 'No tokens yet': 'Noch keine Token', 'Token': 'Token',
         'Created': 'Angelegt', 'Last used': 'Zuletzt benutzt', 'Copy': 'Kopieren', 'Copied': 'Kopiert', 'Token revoked': 'Token widerrufen',
-        'Name, e.g. HobbyRadioPortal': 'Name, z. B. HobbyRadioPortal', 'Copy the token now – it is shown only once:': 'Token jetzt kopieren – er wird nur einmal angezeigt:',
+ 'Copy the token now – it is shown only once:': 'Token jetzt kopieren – er wird nur einmal angezeigt:',
         'Revoke this token? The service loses access at once.': 'Token widerrufen? Der Dienst verliert sofort den Zugang.',
-        'For the HobbyRadioPortal and other services: they manage the APRS and DAPRS settings with the role admin – never users, sessions, tokens, backups, access, HTTPS or updates. The token is shown only once; enter it in the portal under Services & plugins → APRS → API token.': 'Für das HobbyRadioPortal und andere Dienste: Sie verwalten damit die APRS- und DAPRS-Einstellungen mit der Rolle Admin – nie Benutzer, Sitzungen, Token, Backups, Zugang, HTTPS oder Updates. Der Token wird nur einmal angezeigt; trag ihn im Portal unter Dienste & Plugins → APRS → API-Token ein.',
         'Not with an API token': 'Nicht mit einem API-Token',
         'Area': 'Bereich', 'Users': 'Benutzer', 'Sessions': 'Sitzungen', 'Import': 'Import', 'User': 'Benutzer', 'Superadmin': 'Superadmin', 'Superadmin only': 'Nur Superadmin',
         'superadmin only': 'nur Superadmin', 'Display name': 'Anzeigename', 'New password (optional)': 'Neues Passwort (optional)', 'Password (min. 8)': 'Passwort (mind. 8)',

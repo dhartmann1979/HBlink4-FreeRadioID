@@ -45,8 +45,6 @@ from . import n8_security as _sec
 from . import n8_update_guard as _guard
 from . import backup as _backup
 from . import autobackup as _autobackup
-from . import migration as _migration
-from . import n8mig as _n8mig
 from .aprs.service import AprsService
 from .aprs.store import public as _aprs_public
 from .aprs.packet import passcode as _aprs_passcode, valid_call as _aprs_valid_call
@@ -1207,45 +1205,9 @@ def _client_ip(conn) -> str:
     return conn.client.host if conn.client else ""
 
 
-# HobbyRadioPortal on the same server (no token, since 1.11.0): what it may reach – reading everything public, the settings and
-# the APRS administration. Never users, sessions, backups, updates or restarts.
-PORTAL_PATHS = ("/api/admin/settings", "/api/admin/aprs", "/api/admin/audit")
-# Settings the portal may never change (access, HTTPS, updates)
-PORTAL_LOCKED_SECTIONS = ("access", "https", "update")
-# Only a *direct* call from this machine counts as the portal: loopback peer, Host is loopback, the portal's marker header and
-# **no** proxy header. Requests through nginx/Caddy also arrive from 127.0.0.1, but proxies add X-Forwarded-For.
-# Switch off with the environment variable HB4_PORTAL_LOCAL=0.
-PORTAL_LOCAL = os.environ.get("HB4_PORTAL_LOCAL", "1") != "0"
-_LOOPBACK = {"127.0.0.1", "::1", "localhost"}
-_PROXY_HEADERS = ("x-forwarded-for", "x-real-ip", "forwarded", "x-forwarded-host", "x-forwarded-proto", "via",
-                  "cf-connecting-ip", "true-client-ip", "x-client-ip")
-
-
-def portal_local(conn) -> bool:
-    """Is this the HobbyRadioPortal calling directly on this server?"""
-    if not PORTAL_LOCAL or conn.headers.get("x-hobbyradioportal") != "1":
-        return False
-    if _client_ip(conn) not in _LOOPBACK or any(h in conn.headers for h in _PROXY_HEADERS):
-        return False
-    host = conn.headers.get("host", "")
-    host = host[1:host.find("]")] if host.startswith("[") else host.rsplit(":", 1)[0]
-    return host in _LOOPBACK
-
-
-def _token_path_ok(path: str) -> bool:
-    if path.startswith("/api/admin/"):
-        return any(path == p or path.startswith(p + "/") for p in PORTAL_PATHS)
-    return path.startswith("/api/") and not path.startswith("/api/auth/")
-
-
 def current_user(conn) -> Optional[dict]:
-    """User of a Request or WebSocket from its session cookie, or the HobbyRadioPortal on this server (or None)."""
-    user = state.auth.session_user(conn.cookies.get(SESSION_COOKIE))
-    if user:
-        return user
-    if _token_path_ok(conn.url.path) and portal_local(conn):
-        return state.auth.portal_user(conn.headers.get("x-portal-user", ""))
-    return None
+    """User of a Request or WebSocket from its session cookie (or None)."""
+    return state.auth.session_user(conn.cookies.get(SESSION_COOKIE))
 
 
 def is_admin(user: Optional[dict]) -> bool:
@@ -1339,7 +1301,6 @@ async def _security_middleware(request: Request, call_next):
             return JSONResponse({"error": "Missing X-Dashboard header."}, status_code=403)
         # Private dashboard: everything but login and branding needs a session.
         if (not _public_dashboard() and not path.startswith("/api/auth/") and path != "/api/config"
-                and not path.startswith("/api/migration/")
                 and not (path.startswith("/api/aprs/") and state.aprs.c("aprs.map.public", True))
                 and not current_user(request)):
             return JSONResponse({"error": "Please log in."}, status_code=401)
@@ -1655,8 +1616,6 @@ async def admin_save_settings(request: Request, body: dict = Body(...)):
     changes = body.get("changes") or {}
     if not isinstance(changes, dict):
         raise _HTTPError(400, "changes must be an object")
-    if actor.get("api") and any(FIELD_BY_KEY[k].section in PORTAL_LOCKED_SECTIONS for k in changes if k in FIELD_BY_KEY):
-        raise _HTTPError(403, "Access, HTTPS and update settings cannot be changed with an API token.")
     try:
         changed = state.settings.update(dashboard_config, changes, actor["username"])
     except SettingsError as e:
@@ -1763,8 +1722,6 @@ async def import_apply(request: Request, body: dict = Body(...)):
 async def admin_reset_settings(request: Request, body: dict = Body(...)):
     actor = _require_admin(request)
     section = str(body.get("section") or "")
-    if actor.get("api") and section in PORTAL_LOCKED_SECTIONS:
-        raise _HTTPError(403, "Access, HTTPS and update settings cannot be changed with an API token.")
     before = {k: _copy.deepcopy(_get_cfg(k)) for k in FIELD_BY_KEY}
     try:
         state.settings.reset_section(dashboard_config, _file_config, section, actor["username"])
@@ -2031,99 +1988,6 @@ async def admin_backup_inspect(request: Request):
 
 # ---------------------------------------------------------------- Umzug ins HobbyRadioPortal
 # Superadmin legt einen Umzugscode an; der Web-Installer des Portals holt damit Vorschau und Klon (verschlüsselt).
-def _migration_codes() -> "_migration.Codes":
-    return _migration.Codes(_backup_dir())
-
-
-def _migration_values() -> dict:
-    try:
-        return state.settings.db.stored()
-    except Exception:
-        return {}
-
-
-def _migration_info() -> dict:
-    v = _version.local_version() or {}
-    try:
-        users = len(state.auth.list_users())
-    except Exception:
-        users = 0
-    reps = len(getattr(state, "repeaters", {}) or {})   # gerade verbunden
-    return _migration.info(_migration_values(), version=v.get("version") or v.get("label") or "", users=users, repeaters=reps)
-
-
-def _migration_code(request: Request) -> str:
-    auth = request.headers.get("authorization", "")
-    if not auth.lower().startswith("bearer "):
-        raise _HTTPError(401, "Umzugscode fehlt.")
-    return auth[7:].strip()
-
-
-@app.get("/api/admin/migration")
-async def admin_migration(request: Request):
-    _require_backup_owner(request)
-    return {"codes": _migration_codes().list(), "info": _migration_info(), "https": request.url.scheme == "https",
-            "ttl_hours": _migration.TTL // 3600, "max_uses": _migration.MAX_USES}
-
-
-@app.post("/api/admin/migration/code")
-async def admin_migration_code(request: Request):
-    actor = _require_backup_owner(request)
-    c = _migration_codes().create(actor["username"])
-    state.auth.audit("migration_code_created", actor["username"], c["id"], _client_ip(request))
-    return c
-
-
-@app.delete("/api/admin/migration/code/{cid}")
-async def admin_migration_revoke(cid: str, request: Request):
-    actor = _require_backup_owner(request)
-    if not re.fullmatch(r"[0-9a-f]{8}", cid) or not _migration_codes().revoke(cid):
-        raise _HTTPError(404, "Umzugscode nicht gefunden.")
-    state.auth.audit("migration_code_revoked", actor["username"], cid, _client_ip(request))
-    return {"ok": True}
-
-
-@app.post("/api/migration/info")
-async def migration_info(request: Request):
-    try:
-        _migration_codes().check(_migration_code(request), _client_ip(request))
-    except _n8mig.MigrationError as e:
-        raise _HTTPError(403, str(e))
-    return _migration_info()
-
-
-@app.post("/api/migration/export")
-async def migration_export(request: Request):
-    from starlette.background import BackgroundTask
-    ip = _client_ip(request)
-    try:
-        c = _migration_codes().check(_migration_code(request), ip, use=True)
-    except _n8mig.MigrationError as e:
-        raise _HTTPError(403, str(e))
-    _backup_idle()
-    folder = _backup_dir()
-    plain = folder / f"migration-{c['id']}-{int(time.time())}.tar.gz"
-    packed = plain.with_suffix(".n8mig")
-    async with _backup_lock:
-        try:
-            state.save_all_data()
-            await asyncio.to_thread(state.aprs.store.flush)
-            units = await asyncio.to_thread(_backup.collect_units)
-            await asyncio.to_thread(_backup.create_archive, _version.REPO_ROOT, state._data_dir, plain,
-                                    version=_version.local_version(), system_units=units,
-                                    stage_hook=lambda st: _migration.apply_overrides(st, _migration.PORTAL_OVERRIDES))
-            await asyncio.to_thread(_n8mig.encrypt_file, plain, packed, c["secret"])
-        except Exception:
-            packed.unlink(missing_ok=True)
-            raise
-        finally:
-            plain.unlink(missing_ok=True)
-    state.auth.audit("migration_exported", f"Umzugscode {c['id']}", f"{packed.stat().st_size // 1024} KB", ip)
-    logger.info(f"📦 Umzugspaket an {ip} geliefert ({packed.stat().st_size // 1024} KB, Code {c['id']})")
-    return FileResponse(packed, media_type="application/octet-stream", filename="hblink4-umzug.n8mig",
-                        headers={"Cache-Control": "no-store"}, background=BackgroundTask(packed.unlink, missing_ok=True))
-
-
 @app.post("/api/admin/backup/recovery-key")
 async def admin_backup_recovery_key(request: Request):
     import uuid
