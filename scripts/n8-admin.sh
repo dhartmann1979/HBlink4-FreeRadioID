@@ -200,7 +200,9 @@ check_perms() {
       id -nG "$SVC_USER" | grep -qw "$g" && ck ok user "$SVC_USER in Gruppe $g" || ck bad user "$SVC_USER ist nicht in Gruppe $g"
     done
     x=$(getent passwd "$SVC_USER" | cut -d: -f7)
-    [[ "$x" == */nologin || "$x" == /bin/false ]] && ck ok user "$SVC_USER hat keine Login-Shell" || ck warn user "$SVC_USER hat eine Login-Shell ($x)"
+    if [[ "$x" == */nologin || "$x" == /bin/false ]]; then ck ok user "$SVC_USER hat keine Login-Shell"
+    elif (( $(id -u "$SVC_USER") >= 1000 )); then ck ok user "$SVC_USER ist ein normaler Benutzer mit Shell ($x) – gewollt, der Dienst läuft unter deinem Konto"
+    else ck warn user "$SVC_USER hat eine Login-Shell ($x)"; fi
   else ck bad user "Dienstbenutzer $SVC_USER fehlt – bitte den Installer neu starten"; fi
   [[ -d "$APP" ]] || { ck bad prog "$APP fehlt"; return 0; }
   prune_args

@@ -4,6 +4,13 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.12.5] – 2026-11-25
+
+### 🔧 Berechtigungen: Dienst unter dem eigenen Konto ist in Ordnung
+- Läuft HBlink4 unter einem normalen Benutzerkonto (UID ≥ 1000, z. B. `adn`), meldet `n8-admin.sh` die Login-Shell nicht mehr als
+  Warnung, sondern als gewollt. Nur System-Dienstbenutzer mit Shell werden weiter angemerkt.
+- N8 Admin-Kit: Update-Prüfung zählt jede HTTP-Antwort außer 5xx (auch für den Keep-Alive), Grundlage für den Keep-Alive.
+
 ## [1.12.4] – 2026-11-25
 
 ### 🐛 Fix: Dashboard startet nach dem Umstellen auf das N8 Admin-Kit nicht mehr (Neustart-Schleife)
