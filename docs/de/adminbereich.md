@@ -49,7 +49,7 @@ und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 | 🎨 **Darstellung** | 🎨 Aussehen · 🔗 Links |
 | 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💾 Backup |
 
-Gruppen klappen per Klick auf und zu (der Browser merkt sich das). Am Smartphone steht das Menü über dem Inhalt als aufklappbare
+Alle Gruppen sind **anfangs zugeklappt** – offen ist nur die Gruppe der gerade gewählten Seite; ein Klick auf eine Gruppe klappt sie auf (gemerkt bis zum Schließen des Browser-Tabs). Am Smartphone steht das Menü über dem Inhalt als aufklappbare
 Leiste „☰ *aktueller Bereich*“. Das Fenster ist immer gleich groß, nur der Inhalt rollt; Kacheln einer Reihe sind gleich hoch.
 
 ## 💾 Backup

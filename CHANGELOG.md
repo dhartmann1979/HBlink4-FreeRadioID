@@ -4,6 +4,15 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.13.3] – 2026-11-25
+
+### 🧭 Baum-Menü: anfangs zugeklappt, überall gleich
+- Alle Gruppen des Admin-Menüs sind jetzt **standardmäßig zugeklappt** – offen ist nur die Gruppe der gerade gewählten Seite.
+  Eine Gruppe, die du aufklappst, bleibt offen, bis du den Browser-Tab schließt (vorher wurde der Zustand dauerhaft gespeichert).
+- Das gilt in allen fünf N8-Systemen gleich: HobbyRadioPortal, ADN-FRN-Server, HBlink4-FreeRadioID, N8 Hotspot und N8 Crosslink
+  nutzen denselben Baum aus dem N8 Kit, mit denselben Gruppen in derselben Reihenfolge.
+- Status-Punkte im Menü (z. B. ● online) stehen schlank rechts statt als Plakette.
+
 ## [1.13.2] – 2026-11-25
 
 ### 🧭 Frühere Unter-Menüs im Baum-Menü
