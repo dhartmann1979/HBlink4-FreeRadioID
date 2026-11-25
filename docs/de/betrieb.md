@@ -68,13 +68,17 @@ Zu jedem Problem steht die passende Lösung mit **→** dahinter. Am Ende steht 
 
 ## Aktualisieren
 
-Der Server fragt jede Stunde bei GitHub nach einer neuen Version. Eingeloggte Admins sehen dann einen Hinweis und können mit **⬇️ Update now** direkt im Browser installieren (siehe [Adminbereich → Update now](adminbereich.md#️-update-now)). Auf der Konsole geht es so:
+Der Server fragt jede Stunde bei GitHub nach einer neuen Version. Eingeloggte Admins sehen dann einen Hinweis und können mit **⬇️ Update now** direkt im Browser installieren (siehe [Adminbereich → Update now](adminbereich.md#️-update-now)). Auf der Konsole geht es (ab 1.10.0) mit einem Befehl:
 
 ```bash
-cd /opt/HBlink4
-sudo -u hblink git pull --ff-only
-sudo systemctl restart hblink4 hblink4-dash
+sudo /opt/HBlink4/scripts/update.sh            # holen, Pakete bei Bedarf, Rechte prüfen, beide Dienste neu starten
+sudo /opt/HBlink4/scripts/update.sh --check    # nur prüfen: {"current", "latest", "behind", "notes"}
 ```
+
+`update.sh` spult nur vor (fast-forward) – nie über von Hand geänderte Dateien oder eigene Commits –, installiert Python-Pakete nur bei
+geänderten `requirements*`, setzt Besitzer (Dienst-Benutzer) und Rechte neu, startet `hblink4` und `hblink4-dash` neu und schaltet den
+**N8 update guard** scharf: Kommt das Dashboard nach drei Starts nicht hoch, geht es automatisch auf den alten Stand zurück.
+Dasselbe Skript nutzt das **HobbyRadioPortal** unter *Admin → System → 🧩 Dienste* (auch *Alle aktualisieren*).
 
 Vorher eine [Sicherung](#sicherung) zu machen schadet nie. Die Einstellungen aus dem Adminbereich liegen in der Datenbank und bleiben erhalten. Welche Version läuft, steht unten in der Fußzeile jeder Seite und im Adminbereich unter **🖥️ System**.
 

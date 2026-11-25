@@ -147,12 +147,11 @@ Am einfachsten richtest du HTTPS gleich in Schritt 7 des Skripts ein. Später ge
 ## Aktualisieren
 
 ```bash
-cd /opt/HBlink4
-sudo -u hblink git pull                       # Dienst-Benutzer einsetzen
-sudo -u hblink ./venv/bin/pip install -r requirements.txt -r requirements-dashboard.txt
-sudo systemctl restart hblink4 hblink4-dash
-sudo ./scripts/check.sh
+sudo /opt/HBlink4/scripts/update.sh           # ab 1.10.0 – siehe Betrieb → Aktualisieren
+sudo /opt/HBlink4/scripts/check.sh
 ```
+
+Ältere Stände (vor 1.10.0) einmal von Hand: `cd /opt/HBlink4 && sudo -u hblink git pull --ff-only`, danach gibt es `scripts/update.sh`.
 
 `git pull` ändert weder die Config-Dateien noch die Datenbank. Neue Einstellungen erscheinen nach dem Neustart im Adminbereich mit ihrer Vorgabe.
 

@@ -4,6 +4,28 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.10.0] – 2026-11-25
+
+**`scripts/update.sh` – Update mit einem Befehl, für die Konsole und das HobbyRadioPortal.** Das
+[HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) (ab 0.13.0) hat eine Seite *🧩 Dienste*, die alle Dienste auf
+dem Server auf Updates prüft und aktualisiert – einzeln oder alle auf einmal. Für HBlink4 nutzt es dieses Skript.
+Ausführlich: [docs/de/betrieb.md](docs/de/betrieb.md#aktualisieren).
+
+### ⌨️ `sudo scripts/update.sh [--check]`
+- `--check` gibt nur JSON aus: installierte und neueste Version, Zahl der neuen Commits und ihre Titel.
+- Ohne Option: holt den Branch von `origin` und spult **nur vor** (fast-forward) – wie *Update now* im Dashboard: nie über von Hand
+  geänderte Dateien (Abbruch mit Dateiliste) und nie über eigene Commits.
+- Python-Pakete werden nur nachinstalliert, wenn sich `requirements.txt`, `requirements-dashboard.txt` oder `pyproject.toml` geändert haben.
+- **Rechte prüfen und korrigieren:** alles gehört dem Dienst-Benutzer (aus `hblink4.service`, sonst Besitzer des Verzeichnisses),
+  Skripte ausführbar, `config/` und `dashboard/data/` 750, Datenbanken 600.
+- Startet `hblink4` und `hblink4-dash` neu, wartet, bis das Dashboard antwortet, und schaltet den **N8 update guard** scharf
+  (`dashboard/data/update.pending`): kommt das Dashboard nach drei Starts nicht hoch, geht es automatisch auf den alten Stand zurück.
+- Ohne neue Commits ändert es nichts außer den Rechten (`--restart` startet trotzdem neu).
+
+### 🧪 Geprüft
+- Auf einem echten älteren Klon: `--check` (JSON mit Versionen und Commit-Titeln), Update vorgespult, update guard gesetzt,
+  Rechte korrigiert, Neustart angestoßen; ein unbrauchbarer Dienst-Benutzer aus systemd fällt auf den Besitzer des Verzeichnisses zurück.
+
 ## [1.9.0] – 2026-11-25
 
 **`setup.sh` ohne Rückfragen: `HB4_ANSWERS=/pfad/answers.json`.** Damit kann der Web-Installer des

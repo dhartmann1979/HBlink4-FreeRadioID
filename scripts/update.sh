@@ -34,6 +34,7 @@ fi
 
 echo "› HBlink4-FreeRadioID $CUR → $LATEST ($BEHIND neue Commits auf $BRANCH)"
 SVC_USER="$(systemctl show -p User --value hblink4.service 2>/dev/null || true)"; SVC_USER="${SVC_USER:-$(stat -c %U "$ROOT")}"
+id "$SVC_USER" >/dev/null 2>&1 || SVC_USER="$(stat -c %U "$ROOT")"     # Unit fehlt oder liefert Unsinn → Besitzer des Verzeichnisses
 SVC_GROUP="$(id -gn "$SVC_USER" 2>/dev/null || echo "$SVC_USER")"
 if [[ "$BEHIND" -gt 0 ]]; then
     DIRTY="$(git_ status --porcelain --untracked-files=no)"
