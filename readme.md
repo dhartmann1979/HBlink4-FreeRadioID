@@ -113,7 +113,7 @@ Das Installationsskript führt durch alle Einstellungen. Jede Frage hat eine Vor
 <td><img src="docs/images/links-menu.png" alt="Link-Menü"><br><b>🔗 Link-Menü</b> mit den Site-Icons der verlinkten Seiten.</td>
 </tr>
 <tr>
-<td><img src="docs/images/admin-settings-dmr.png" alt="DMR-Einstellungen"><br><b>Einstellungen mit Seitennavigation</b>: Schalter, Auswahllisten, seltene Optionen eingeklappt.</td>
+<td><img src="docs/images/admin-settings-dmr.png" alt="DMR-Einstellungen"><br><b>Einstellungen im Baum-Menü</b>: Abschnitte als Zweige, Schalter, Auswahllisten, seltene Optionen eingeklappt.</td>
 <td><img src="docs/images/admin-import-result.png" alt="Import"><br><b>📥 Import</b>: Konfiguration von HBlink3, FreeDMR oder ADN übernehmen.</td>
 </tr>
 </table>

@@ -4,6 +4,17 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.13.2] – 2026-11-25
+
+### 🧭 Frühere Unter-Menüs im Baum-Menü
+- Das frühere Seitenmenü der **Einstellungen** (Dashboard · DMR-Server) steckt jetzt im Baum: **⚙️ Einstellungen** mit den Abschnitten
+  des Dashboards (Ankündigung, Zugang, FreeRadioID-Daten, Rufzeichen-Datenbank, Talkgroups & Statistik, Tab Konfiguration, HTTPS & Web,
+  Updates) und ein eigener Eintrag **🛰️ DMR-Server** mit den Abschnitten für HBlink4 (DMR-Server, Zugang für Repeater & Hotspots,
+  FreeRadioID-Login, Geräteerkennung, Muster/Sperrliste/Links).
+- Ebenso **📡 APRS**: Übersicht · Server · Uplink & Downlink · DAPRS-Dekodierung · DMR → APRS · Karte · Domains als Zweige.
+- Die Seitenleisten in den Seiten selbst (und die Auswahlliste am Handy) sind entfallen – der Inhalt hat die volle Breite.
+- N8 Kit: Einträge im Baum können Zweige haben (`children`); sie klappen mit ihrem Eintrag auf und zu.
+
 ## [1.13.1] – 2026-11-25
 
 ### 🐛 Fix: Keep-Alive startete einen gesunden Dienst neu („Antwort ist kein JSON“)

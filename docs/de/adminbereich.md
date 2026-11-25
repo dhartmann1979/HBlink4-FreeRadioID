@@ -44,7 +44,7 @@ und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 
 | Gruppe | Einträge |
 |---|---|
-| 📡 **Betrieb** | ⚙️ Einstellungen · ↔️ OpenBridge · 📡 APRS · 📥 Import · 📜 Protokoll |
+| 📡 **Betrieb** | ⚙️ Einstellungen (Zweige: Abschnitte des Dashboards) · 🛰️ DMR-Server (Zweige: Abschnitte für HBlink4) · ↔️ OpenBridge · 📡 APRS (Zweige: Übersicht, Server, Uplink & Downlink, DAPRS, DMR → APRS, Karte, Domains) · 📥 Import · 📜 Protokoll |
 | 👥 **Benutzer & Zugang** | 👥 Benutzer · 🔑 Sitzungen |
 | 🎨 **Darstellung** | 🎨 Aussehen · 🔗 Links |
 | 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💾 Backup |
@@ -74,11 +74,9 @@ Für alle Bereiche gilt:
 
 ## ⚙️ Settings
 
-<p align="center"><img src="../images/admin-settings-dashboard.png" alt="Einstellungen mit Seitennavigation" width="72%">
-&nbsp;
-<img src="../images/admin-settings-mobile.png" alt="Einstellungen am Smartphone" width="22%"></p>
+<p align="center"><img src="../images/admin-settings-dashboard.png" alt="Einstellungen im Baum-Menü" width="90%"></p>
 
-Links steht die Liste der Abschnitte, rechts der gewählte Abschnitt mit einem Satz, worum es geht. Am Smartphone wählst du den Abschnitt aus einer Liste. **↺ Defaults from file** holt einen Abschnitt wieder aus der Config-Datei.
+Seit **1.13.2** hängen die Abschnitte als Zweige im Baum-Menü: unter **⚙️ Einstellungen** die des Dashboards, unter **🛰️ DMR-Server** die für HBlink4 (die frühere Seitenleiste mit „Dashboard · DMR server“ ist entfallen, der Abschnitt hat die volle Breite). Am Smartphone klappt der Baum über dem Inhalt auf. **↺ Defaults from file** holt einen Abschnitt wieder aus der Config-Datei.
 
 ### 📊 Dashboard
 
@@ -104,7 +102,7 @@ Die **Talkgroup-Namen** gelten für die Statistik, den Tab *Configuration* und d
 
 ### 🛰️ DMR-Server (HBlink4)
 
-<p align="center"><img src="../images/admin-settings-dmr.png" alt="Einstellungen DMR-Server" width="72%"></p>
+<p align="center"><img src="../images/admin-settings-dmr.png" alt="🛰️ DMR-Server im Baum-Menü" width="90%"></p>
 
 | Abschnitt | Einstellungen | Wirkt |
 |---|---|---|
