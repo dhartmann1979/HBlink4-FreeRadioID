@@ -37,7 +37,20 @@ Im Adminbereich stellst du **Dashboard und DMR-Server** ein, ohne SSH und ohne C
 
 ## Aufbau
 
-Oben wählst du den Bereich: **👥 Users · ⚙️ Settings · 🎨 Appearance · 🔗 Links · ↔️ OpenBridge · 📡 APRS · 💾 Backup · 📥 Import · 🔑 Sessions · 📜 Log · 🖥️ System**. Am Smartphone ist das eine Auswahlliste. Das Fenster ist immer gleich groß, egal welcher Bereich offen ist; nur der Inhalt rollt. Jeder Bereich beginnt mit einem Satz, worum es geht.
+<p align="center"><img src="../images/admin-keepalive.png" alt="Adminbereich mit Baum-Menü" width="95%"></p>
+
+Seit **1.13.0** steht links im Admin-Fenster ein **Baum-Menü** – dasselbe wie im HobbyRadioPortal, ADN-FRN-Server, N8 Hotspot
+und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
+
+| Gruppe | Einträge |
+|---|---|
+| 📡 **Betrieb** | ⚙️ Einstellungen · ↔️ OpenBridge · 📡 APRS · 📥 Import · 📜 Protokoll |
+| 👥 **Benutzer & Zugang** | 👥 Benutzer · 🔑 Sitzungen |
+| 🎨 **Darstellung** | 🎨 Aussehen · 🔗 Links |
+| 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💾 Backup |
+
+Gruppen klappen per Klick auf und zu (der Browser merkt sich das). Am Smartphone steht das Menü über dem Inhalt als aufklappbare
+Leiste „☰ *aktueller Bereich*“. Das Fenster ist immer gleich groß, nur der Inhalt rollt; Kacheln einer Reihe sind gleich hoch.
 
 ## 💾 Backup
 
@@ -282,26 +295,42 @@ Das Ergebnis ist nach Bereichen sortiert (DMR server, Access, OpenBridge, Links,
 
 Die genaue Umsetzung steht in [Anleitungen → Umziehen](anleitungen.md#2-von-hblink3-freedmr-oder-adn-umziehen).
 
-## 🔑 Sessions, 📜 Log, 🖥️ System
+## 🔑 Sitzungen, 📜 Protokoll, 🖥️ Server & HTTPS
 
 <p align="center">
   <img src="../images/admin-sessions.png" alt="Sitzungen" width="49%">
-  <img src="../images/admin-system.png" alt="System" width="49%">
+  <img src="../images/admin-system.png" alt="Server & HTTPS" width="49%">
 </p>
 
-- **Sessions**: alle Anmeldungen mit IP, Browser und Ablauf; jede lässt sich beenden.
-- **Log**: Anmeldungen, Fehlversuche, Benutzer- und Einstellungsänderungen, Neustarts, jeweils mit Zeit, Person und IP.
-- **System**: HTTPS mit Ablaufdatum des Zertifikats, Zugriff, Verbindung zum DMR-Server, FreeRadioID-IDs und gespeicherte Avatare. Dazu die Knöpfe **Restart dashboard** und **Restart DMR server**; sie erscheinen nur, wenn beides als systemd-Dienst läuft.
-- **⬆️ Updates** (im Tab System): installiert, Stand auf GitHub, zuletzt geprüft, letztes Update (erfolgreich oder zurückgenommen), Branch, Art des Neustarts und ob du installieren darfst. **↻ Jetzt prüfen** fragt sofort nach, **⬆️ Update jetzt installieren** installiert.
+- **Sitzungen**: alle Anmeldungen mit IP, Browser und Ablauf; jede lässt sich beenden.
+- **Protokoll**: Anmeldungen, Fehlversuche, Benutzer- und Einstellungsänderungen, Neustarts, jeweils mit Zeit, Person und IP.
+- **Server & HTTPS**: HTTPS mit Ablaufdatum des Zertifikats, Zugriff, Verbindung zum DMR-Server, FreeRadioID-IDs und gespeicherte
+  Avatare. Dazu die Knöpfe **Dashboard neu starten** und **DMR-Server neu starten**; sie erscheinen nur, wenn beides als systemd-Dienst läuft.
+
+## ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive
+
+<p align="center"><img src="../images/admin-system-update.png" alt="System → Update" width="95%"></p>
+
+Diese vier Einträge unter **System** sind gemeinsame Ansichten des **N8 Kit** und sehen in allen N8-Systemen gleich aus.
+
+- **⬆️ Update**: installiert, Stand auf GitHub, zuletzt geprüft, Branch, Art des Neustarts und ob du installieren darfst;
+  **↻ Jetzt prüfen** und **⬆️ Update jetzt installieren**, rechts das **📜 Update-Protokoll** mit dem letzten Ergebnis.
+- **🧩 Dienste**: HBlink4, Dashboard und Update-Auslöser mit Zustand, Autostart und Starten · Stoppen · Neu starten.
+- **🔐 Berechtigungen & sudo**: zeigt nur, was nicht stimmt; **🛠️ Korrigieren** repariert und prüft erneut.
+- **💓 Keep-Alive**: siehe [Betrieb → Keep-Alive](betrieb.md#-keep-alive).
+
+<p align="center">
+  <img src="../images/admin-services.png" alt="Dienste" width="48%">
+  <img src="../images/admin-perms.png" alt="Berechtigungen & sudo" width="48%">
+</p>
 
 ### ⬆️ Update-Hinweis
 
 <p align="center"><img src="../images/update-banner.png" alt="Update-Hinweis" width="90%"></p>
-<p align="center"><img src="../images/admin-system-update.png" alt="Updates im Tab System" width="50%"></p>
 
 Hinweis, Updates-Kachel und Fortschritt kommen aus dem **N8 Kit** und sehen in **HBlink4-FreeRadioID, adn-frn-server, N8-HotSpot und N8 Crosslink gleich aus** (siehe [Sicherheit & N8 Kit](sicherheit.md)).
 
-Der Server fragt **zu jeder vollen Stunde** bei GitHub nach (bei einem eingestellten Intervall über einer Stunde an den passenden vollen Stunden), auch wenn niemand eingeloggt ist; eine neue Version steht dann auch im Log. Gibt es eine, sehen **eingeloggte Admins** unter der Statusleiste den Hinweis *Update verfügbar: v1.4.0 · … → v1.5.0 · …* mit den Knöpfen **Was ist neu?** (klappt die Änderungen auf), **Jetzt aktualisieren**, **Details** (öffnet Admin → System) und **Später** (blendet den Hinweis für diese Version einen Tag lang aus). Alle anderen Besucher sehen nichts davon.
+Der Server fragt **zu jeder vollen Stunde** bei GitHub nach (bei einem eingestellten Intervall über einer Stunde an den passenden vollen Stunden), auch wenn niemand eingeloggt ist; eine neue Version steht dann auch im Log. Gibt es eine, sehen **eingeloggte Admins** unter der Statusleiste den Hinweis *Update verfügbar: v1.4.0 · … → v1.5.0 · …* mit den Knöpfen **Was ist neu?** (klappt die Änderungen auf), **Jetzt aktualisieren**, **Details** (öffnet Admin → System → Update) und **Später** (blendet den Hinweis für diese Version einen Tag lang aus). Alle anderen Besucher sehen nichts davon.
 
 #### ⬆️ Jetzt aktualisieren
 
@@ -310,19 +339,18 @@ Der Server fragt **zu jeder vollen Stunde** bei GitHub nach (bei einem eingestel
   <img src="../images/update-dialog-done.png" alt="Update läuft" width="40%">
 </p>
 
-Das Fenster zeigt, was neu ist, woher das Update kommt und wie neu gestartet wird, und fragt **dein Passwort** noch einmal ab. Danach siehst du drei Schritte: **Update wird geladen und eingespielt → Dienst startet neu → Weboberfläche wird geprüft**. Ist die neue Version da, lädt die Seite von selbst neu.
+Das Fenster zeigt, was neu ist, woher das Update kommt und wie neu gestartet wird. Seit **1.13.0** fragt es **nicht mehr nach dem Passwort** – eine Admin-Sitzung mit dem Sicherheits-Header gegen fremde Seiten genügt, wie in allen N8-Systemen. Danach siehst du drei Schritte: **Update wird geladen und eingespielt → Dienst startet neu → Weboberfläche wird geprüft**. Ist die neue Version da, lädt die Seite von selbst neu.
 
-- **Passwort:** Fünf Fehlversuche sperren 15 Minuten, genau wie beim Login. Ein falsches Passwort lässt das Fenster offen, du kannst es noch einmal eingeben.
 - **Wer darf:** Standard ist **nur der Superadmin**. Einstellbar unter *Settings → ⬆️ Updates → Who may press “Update now”* (auch „alle Admins“ oder „niemand“).
 - **Wie:** Der Knopf legt nur den Auftrag an; installiert wird als root von `scripts/n8-admin.sh` (siehe [Betrieb → Update](betrieb.md#dienste-und-berechtigungen)) – Pakete, Rechte und sudo, Neustart beider Dienste.
-- **Automatisch zurück (Rollback):** Antwortet das Dashboard 90 Sekunden nach dem Neustart nicht, setzt `n8-admin.sh` auf den alten Commit zurück und startet erneut. Das Ergebnis steht unter *Letztes Update* („erfolgreich“ oder „zurückgenommen“), das Protokoll unter *🖥️ System → 📜 Update-Protokoll*.
+- **Automatisch zurück (Rollback):** Antwortet das Dashboard 90 Sekunden nach dem Neustart nicht, setzt `n8-admin.sh` auf den alten Commit zurück und startet erneut. Das Ergebnis steht unter *Letztes Update* („erfolgreich“ oder „zurückgenommen“), das Protokoll unter *System → ⬆️ Update → 📜 Update-Protokoll*.
 - **Neue Python-Pakete:** installiert der Helfer mit.
 
 Was Update now **nicht** tut, mit Absicht:
 - Es lädt nur vom Git-Remote `origin`, der **auf dem Server** eingerichtet ist; eine Adresse aus dem Browser wird nie benutzt. Das Repository in den Settings dient nur dem Hinweis.
 - Es installiert nur **genau den Commit**, den du gesehen hast. Ist auf GitHub inzwischen etwas Neues dazugekommen, bricht es ab und bittet um eine neue Prüfung.
 - Es geht nur **vorwärts** (`git merge --ff-only`). Es bricht ab, wenn Dateien von Hand geändert wurden oder die Installation eigene Commits hat; dann bitte auf der Konsole aktualisieren.
-- Es führt keine Git-Hooks aus und benutzt keine Shell. Jeder Versuch steht im **📜 Log** (`update`, `update_failed`, `confirm_failed`).
+- Es führt keine Git-Hooks aus und benutzt keine Shell. Jeder Versuch steht im **📜 Log** (`update`, `update_failed`).
 
 Einstellungen unter **Settings → ⬆️ Updates**: an/aus, Repository (`owner/name`), wer installieren darf, unter *Advanced* Branch und Prüfabstand (Standard: jede Stunde).
 - Das Dashboard fragt dafür die öffentliche GitHub-API ab; es werden keine Daten des Servers übertragen.

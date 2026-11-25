@@ -84,10 +84,13 @@ sudo /opt/HBlink4/scripts/n8-admin.sh fix-perms
 
 ### Dienste und Berechtigungen
 
-<p align="center"><img src="../images/admin-services.png" alt="Dienste und Berechtigungen" width="90%"></p>
+<p align="center">
+  <img src="../images/admin-services.png" alt="Dienste" width="48%">
+  <img src="../images/admin-perms.png" alt="Berechtigungen & sudo" width="48%">
+</p>
 
 **🖥️ System → 🧩 Dienste** zeigt `hblink4`, `hblink4-dash` und den Update-Auslöser schlank mit Status, **Autostart**-Schalter und
-**▶ Starten / 🔄 Neu starten / ⏹ Stoppen**. Daneben **🔐 Berechtigungen & sudo**: alle Prüfungen von `n8-admin.sh` (Dienst-Benutzer,
+**▶ Starten / ↻ Neu starten / ■ Stoppen**. Der eigene Eintrag **🔐 Berechtigungen & sudo** zeigt alle Prüfungen von `n8-admin.sh` (Dienst-Benutzer,
 Programm root-eigen, Daten und Konfiguration des Dienstes, `config.json` und Datenbanken 600, systemd-Units, Update-Auslöser,
 sudo installiert/eingebunden/gültig/aktuell/wirksam) mit **🛠️ Korrigieren** (prüfen → korrigieren → erneut prüfen). Konsole:
 `sudo scripts/n8-admin.sh check-perms` bzw. `fix-perms`.
@@ -96,7 +99,7 @@ Die sudo-Freigaben stehen in `/etc/sudoers.d/hblink4-n8admin` – nur exakte Bef
 Damit das Dashboard sudo nutzen kann, läuft `hblink4-dash` ohne `NoNewPrivileges` und ohne enge `CapabilityBoundingSet`; der Helfer setzt
 das bei Bedarf per Drop-in (`hblink4-dash.service.d/n8-admin.conf`). Die frühere Regel `/etc/sudoers.d/hblink4-update` entfällt.
 
-Vorher eine [Sicherung](#sicherung) zu machen schadet nie. Die Einstellungen aus dem Adminbereich liegen in der Datenbank und bleiben erhalten. Welche Version läuft, steht unten in der Fußzeile jeder Seite und im Adminbereich unter **🖥️ System**.
+Vorher eine [Sicherung](#sicherung) zu machen schadet nie. Die Einstellungen aus dem Adminbereich liegen in der Datenbank und bleiben erhalten. Welche Version läuft, steht unten in der Fußzeile jeder Seite und im Adminbereich unter **🖥️ System → ⬆️ Update**.
 
 **Zurück zur vorherigen Version:** Im **📜 Log** steht bei jedem Update `alt → neu`. Mit dem alten Commit:
 
@@ -106,6 +109,33 @@ sudo -u hblink git reset --hard <alter-commit>
 sudo systemctl restart hblink4 hblink4-dash
 ```
 
+
+### 💓 Keep-Alive
+
+<p align="center"><img src="../images/admin-keepalive.png" alt="System → Keep-Alive" width="95%"></p>
+
+Seit **1.13.0** wacht ein Keep-Alive über HBlink4 und das Dashboard. `hblink4-keepalive.timer` startet **jede Minute als root**
+`scripts/n8-admin.sh keepalive`:
+
+| Was | Wie |
+|---|---|
+| **Dashboard** | antwortet es? |
+| **HBlink4** | lauscht der Prozess von `hblink4.service` wirklich auf seinem DMR-Port (UDP)? |
+| **HBlink4 ↔ Dashboard** | ist das Dashboard mit HBlink4 verbunden? (`/api/n8/health`, nur lokal erreichbar) |
+| **APRS** | wenn eingeschaltet: lauscht der APRS-Server, steht der Uplink? |
+| **Neustart** | nach **3 Minuten** krank (sofort bei `failed`), **höchstens 4× je Stunde** – danach „aufgegeben“ im Protokoll |
+| **Internet-Ausfall** | 1.1.1.1, 9.9.9.9 und github.com (Port 443) nicht erreichbar → keine sinnlosen Neustarts; ist das Netz nach mindestens 60 s wieder da, werden `hblink4` und `hblink4-dash` einmal neu gestartet (Peers, OpenBridge und APRS-Uplink stehen sofort wieder) |
+| **Heartbeat** | optional jede Minute ein Ping an Uptime Kuma („Push“) oder Healthchecks.io, bei Fehlern an die Fehler-Adresse |
+| **Wartung** | **⏸ 1 h pausieren**; ein unter *Dienste* gestoppter Dienst bleibt gestoppt, bis du ihn dort startest |
+
+Dateien in `dashboard/data/`: `keepalive.conf`, `keepalive.json`, `keepalive.log` (höchstens 400 Zeilen). Eingerichtet wird der
+Timer von Installer, Update und `fix-perms`; `check-perms` prüft ihn mit.
+
+```bash
+systemctl status hblink4-keepalive.timer
+sudo scripts/n8-admin.sh keepalive          # eine Runde von Hand
+tail -f dashboard/data/keepalive.log
+```
 
 ### Schutz gegen Angriffe von außen
 
