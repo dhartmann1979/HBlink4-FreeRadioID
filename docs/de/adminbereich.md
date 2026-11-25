@@ -157,6 +157,25 @@ Dialoge und der Adminbereich – haben dafür eine eigene helle Darstellung (`da
 [N8-Hotspot](https://github.com/dhartmann1979/N8-HotSpot) (Admin → Appearance). Ein Farbschema lässt sich dort als JSON
 kopieren und hier wieder einsetzen – oder umgekehrt –, dann sehen alle drei gleich aus.
 
+### 🔤 Schrift (N8 Theme 2.1)
+
+Unter *Darstellung → 🎨 Aussehen* gibt es jetzt eine **Schriftauswahl mit Vorschau** – jede Karte zeigt Rufzeichen, TG, Frequenz,
+Umlaute und Ziffern in ihrer Schrift; ein Klick wirkt sofort auf der ganzen Seite, gespeichert wird mit dem Aussehen.
+
+| Schrift | Charakter |
+|---|---|
+| **IBM Plex Sans** (Standard) | technisch, sehr gut lesbar |
+| Inter | neutral, am Bildschirm sehr gut lesbar |
+| Barlow | wie DIN-Beschilderung, kompakt |
+| Exo 2 | technisch mit futuristischem Einschlag |
+| Rajdhani | schmal, wie ein Funkgeräte-Display |
+| System | Schrift des Geräts (kein Download) |
+
+Zahlen, Anzeigen und Code stehen immer in **JetBrains Mono** (CSS-Variable `--n8-mono`). Alle Schriften liegen im Projekt
+(`fonts/` neben `n8-theme.js`, SIL Open Font License 1.1) – es gibt keine Anfrage an Google Fonts oder andere fremde Server.
+Gleich in allen N8-Systemen.
+
+
 **↺ N8 standard** stellt Farben und Logo-Größe auf das N8-Design zurück. Hochgeladene Bilder liegen in der Datenbank und sind unter `/branding/logo` und `/branding/favicon` erreichbar. SVG-Dateien mit Skripten oder externen Links werden abgelehnt.
 
 ## 🔗 Links
