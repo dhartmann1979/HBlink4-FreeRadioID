@@ -4791,9 +4791,33 @@ def parse_openbridge_connections() -> List[OpenBridgeConnectionConfig]:
     """Wrapper for config module parse_openbridge_connections"""
     return parse_openbridge_func(CONFIG, LOGGER)
 
+# Absturz-Melder (N8 Kit, dashboard/n8_crash.py): welcher Teil des DMR-Servers hing oder stürzte ab – Befunde im Datenordner des
+# Dashboards, angezeigt unter Admin → System → 💥 Abstürze. Gleiche Zuordnung nutzt der crash-hook von scripts/n8-admin.sh.
+CRASH_SERVICES = [
+    (r"/hblink4/protocol\.py$", "HomeBrew-Protokoll"), (r"/hblink4/freeradioid\.py$", "FreeRadioID"),
+    (r"/hblink4/obp_freedmr\.py$", "OpenBridge"), (r"/hblink4/daprs\.py$", "DAPRS"), (r"/hblink4/access_control\.py$", "Zugangsregeln"),
+    (r"/hblink4/user_cache\.py$", "Benutzer-Cache"), (r"/hblink4/settings_db\.py$", "Einstellungen (DB)"),
+    (r"/hblink4/events\.py$", "Ereignisse ans Dashboard"), (r"/hblink4/(talker_alias|lc)\.py$", "DMR-Daten (LC/Alias)"),
+    (r"/hblink4/hblink\.py$", "DMR-Server (Routing)"),
+]
+
+
+def _install_crashwatch() -> None:
+    try:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from dashboard.n8_crash import CrashWatch
+        data = os.environ.get("HBLINK4_DASH_DATA_DIR") or os.path.join(root, "dashboard", "data")
+        CrashWatch(data, app="HBlink4-FreeRadioID", unit="hblink4.service", services=CRASH_SERVICES).install()
+    except Exception as e:  # noqa: BLE001 – der Melder darf den Server nie am Start hindern
+        LOGGER.warning(f'Absturz-Melder nicht aktiv: {e}')
+
+
 async def async_main():
     """Main async entry point"""
     loop = asyncio.get_running_loop()
+    _install_crashwatch()
     
     # Load config values
     bind_ipv4 = CONFIG['global'].get('bind_ipv4', '0.0.0.0')

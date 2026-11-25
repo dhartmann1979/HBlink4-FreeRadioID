@@ -39,3 +39,23 @@ def test_keepalive_wired():
     assert "sys.view" in (ROOT / "dashboard" / "static" / "n8-kit.js").read_text()
     import subprocess
     assert subprocess.run(["bash", "-n", str(ROOT / "scripts" / "n8-admin.conf")]).returncode == 0
+
+
+def test_crashwatch_wired(tmp_path):
+    """Abstürze (N8 Kit 1.3): Endpunkte, Hinweisfenster, Absturz-Melder in Dashboard und DMR-Server, crash-hook."""
+    srv = (ROOT / "dashboard" / "server.py").read_text()
+    for k in ('@app.get("/api/admin/crashes")', '@app.get("/api/admin/crashes/{cid}")', '@app.post("/api/admin/crashes/ack")', 'unit="hblink4-dash.service"'):
+        assert k in srv, k
+    assert 'unit="hblink4.service"' in (ROOT / "hblink4" / "hblink.py").read_text()
+    assert "N8Kit.sys.crashPopup(" in (ROOT / "dashboard" / "static" / "dashboard.html").read_text()
+    sh = (ROOT / "scripts" / "n8-admin.sh").read_text()
+    assert "crash-hook)" in sh and "setup-crashwatch)" in sh
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from dashboard.n8_admin import N8Admin
+    from dashboard.n8_crash import CrashWatch
+    w = CrashWatch(str(tmp_path), app="HBlink4", unit="hblink4.service")
+    cid = w.note("OpenBridge", "Test", "Traceback", kind="task")
+    a = N8Admin(tmp_path)
+    assert a.crashes()["unacked"] == 1 and "Traceback" in a.crash_log(cid)
+    assert a.crash_ack(all_=True)["unacked"] == 0

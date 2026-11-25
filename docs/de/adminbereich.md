@@ -47,7 +47,7 @@ und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 | 📡 **Betrieb** | ⚙️ Einstellungen (Zweige: Abschnitte des Dashboards) · 🛰️ DMR-Server (Zweige: Abschnitte für HBlink4) · ↔️ OpenBridge · 📡 APRS (Zweige: Übersicht, Server, Uplink & Downlink, DAPRS, DMR → APRS, Karte, Domains) · 📥 Import · 📜 Protokoll |
 | 👥 **Benutzer & Zugang** | 👥 Benutzer · 🔑 Sitzungen |
 | 🎨 **Darstellung** | 🎨 Aussehen · 🔗 Links |
-| 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💾 Backup |
+| 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💥 Abstürze · 💾 Backup |
 
 Alle Gruppen sind **anfangs zugeklappt** – offen ist nur die Gruppe der gerade gewählten Seite; ein Klick auf eine Gruppe klappt sie auf (gemerkt bis zum Schließen des Browser-Tabs). Am Smartphone steht das Menü über dem Inhalt als aufklappbare
 Leiste „☰ *aktueller Bereich*“. Das Fenster ist immer gleich groß, nur der Inhalt rollt; Kacheln einer Reihe sind gleich hoch.
@@ -316,6 +316,7 @@ Diese vier Einträge unter **System** sind gemeinsame Ansichten des **N8 Kit** u
 - **🧩 Dienste**: HBlink4, Dashboard und Update-Auslöser mit Zustand, Autostart und Starten · Stoppen · Neu starten.
 - **🔐 Berechtigungen & sudo**: zeigt nur, was nicht stimmt; **🛠️ Korrigieren** repariert und prüft erneut.
 - **💓 Keep-Alive**: siehe [Betrieb → Keep-Alive](betrieb.md#-keep-alive).
+- **💥 Abstürze**: jeder Absturz, Hänger und Notfall-Neustart von DMR-Server und Dashboard mit Teil, Ursache und Protokoll; neue Befunde erscheinen nach der Anmeldung als Hinweisfenster – siehe [Betrieb → Abstürze](betrieb.md#-abstürze-erkennen-und-aufklären).
 
 <p align="center">
   <img src="../images/admin-services.png" alt="Dienste" width="48%">

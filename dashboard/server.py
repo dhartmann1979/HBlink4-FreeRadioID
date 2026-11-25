@@ -1560,6 +1560,35 @@ async def admin_perms_fix(request: Request):
     return {"ok": ok, "message": out, "check": await _n8().check_perms()}
 
 
+# Abstürze (N8 Kit 1.3): scripts/n8-admin.sh crash-hook, Keep-Alive und n8_crash.CrashWatch (Dashboard und HBlink4) schreiben
+# <Datenordner>/crashes.jsonl – gleiche Adressen in allen N8-Systemen
+@app.get("/api/admin/crashes")
+async def admin_crashes(request: Request):
+    _require_admin(request)
+    return await asyncio.to_thread(_n8().crashes)
+
+
+@app.get("/api/admin/crashes/{cid}")
+async def admin_crash_log(cid: str, request: Request):
+    _require_admin(request)
+    txt = await asyncio.to_thread(_n8().crash_log, cid)
+    if txt is None:
+        raise _HTTPError(404, "Befund nicht gefunden")
+    return {"id": cid, "log": txt}
+
+
+@app.post("/api/admin/crashes/ack")
+async def admin_crashes_ack(request: Request):
+    _require_admin(request)
+    try:
+        b = await request.json()
+    except ValueError:
+        b = {}
+    b = b if isinstance(b, dict) else {}
+    ids = b.get("ids") if isinstance(b.get("ids"), list) else []
+    return await asyncio.to_thread(_n8().crash_ack, [str(i) for i in ids][:500], bool(b.get("all")))
+
+
 @app.get("/api/admin/keepalive")
 async def admin_keepalive(request: Request):
     _require_admin(request)
@@ -3226,6 +3255,28 @@ async def _start_update_loop():
     asyncio.create_task(_update_loop())
     asyncio.create_task(_refresh_link_icons())
     _auto_loop_task = asyncio.create_task(_auto_service().loop())
+
+
+DASH_CRASH_SERVICES = [
+    (r"/dashboard/aprs/", "APRS"), (r"/dashboard/avatars\.py$", "Avatare"), (r"/dashboard/(auto)?backup\.py$", "Backup"),
+    (r"/dashboard/auth\.py$", "Anmeldung"), (r"/dashboard/tls\.py$", "HTTPS"), (r"/dashboard/user_db\.py$", "ID-Datenbank"),
+    (r"/dashboard/(talkgroups|tgstats)\.py$", "Talkgroups"), (r"/dashboard/obpstats\.py$", "OpenBridge-Statistik"),
+    (r"/dashboard/settings\.py$", "Einstellungen"), (r"/dashboard/siteicons\.py$", "Site-Icons"),
+    (r"/dashboard/server\.py$", "Dashboard"), (r"/(uvicorn|starlette|fastapi|websockets)/", "Webinterface"),
+]
+
+
+@app.on_event("startup")
+async def startup_crashwatch():
+    """Absturz-Melder (N8 Kit): Hänger der Event-Loop, abgestürzte Tasks, harter Absturz (faulthandler)."""
+    try:
+        from .n8_crash import CrashWatch
+    except ImportError:
+        from n8_crash import CrashWatch
+    try:
+        CrashWatch(str(state._data_dir), app="HBlink4-FreeRadioID", unit="hblink4-dash.service", services=DASH_CRASH_SERVICES).install()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Absturz-Melder nicht aktiv: {e}")
 
 
 @app.on_event("startup")

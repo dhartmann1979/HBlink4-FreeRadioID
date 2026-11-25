@@ -137,6 +137,24 @@ sudo scripts/n8-admin.sh keepalive          # eine Runde von Hand
 tail -f dashboard/data/keepalive.log
 ```
 
+
+### 💥 Abstürze erkennen und aufklären
+
+<img src="../images/admin-abstuerze.png" alt="System → Abstürze" width="49%"> <img src="../images/absturz-hinweis.png" alt="Hinweis nach der Anmeldung" width="49%">
+
+Seit **HBlink4-FreeRadioID 1.14.0** wird jedes unerwartete Ende festgehalten – in allen N8-Systemen gleich (N8 Kit 1.3). Überwacht werden
+DMR-Server (`hblink4.service`) und Dashboard (`hblink4-dash.service`).
+
+| Ebene | Was festgehalten wird |
+|---|---|
+| **Absturz-Wächter** (systemd, als root) | Drop-in `/etc/systemd/system/<dienst>.d/n8-crashwatch-<id>.conf` mit `ExecStopPost=+… crash-hook`. Nach jedem nicht geplanten Ende: Art (Signal, Fehlercode, Watchdog, OOM, Zeitüberschreitung), letzte 200 Journal-Zeilen, Coredump-Kurzinfo, Python-Stack. systemd startet den Dienst sofort neu |
+| **Python-Dienste** | faulthandler (`crash/fault-<dienst>.log`), Hänger-Wächter der Event-Loop (> 8 s, mit Stack und Teil), abgestürzte Tasks und Threads. Teile: DMR-Server: HomeBrew-Protokoll · FreeRadioID · OpenBridge · DAPRS · Zugangsregeln · Benutzer-Cache · Einstellungen (DB) · Ereignisse ans Dashboard · DMR-Daten · Routing; Dashboard: APRS · Avatare · Backup · Anmeldung · HTTPS · ID-Datenbank · Talkgroups · OpenBridge-Statistik · Webinterface. Zwei Teile bedeuten „wartet auf“, z. B. *Datenbank ← Live-Daten* |
+| **Keep-Alive** | jeder Neustart durch den Keep-Alive (mit Grund); Dienste im Zustand `failed` werden mit `reset-failed` neu gestartet; Neustarts durch systemd ohne Absturz-Wächter werden erkannt; fehlt der Wächter, richtet der Keep-Alive ihn ein |
+
+**Anzeigen:** ⚙️ Admin → 🖥️ System → **💥 Abstürze** (Liste mit Art, Teil, Ursache, vollständigem Protokoll, Zähler je Teil). Neue Befunde
+erscheinen **nach der Anmeldung als Hinweisfenster** und als roter Zähler im Menü, bis sie als gelesen markiert sind.
+Konsole: `sudo scripts/n8-admin.sh crashes`. Dateien: `crashes.jsonl` (letzte 300), `crash/<id>.log`, `crash/ack.json`, `crashwatch.json`.
+
 ### Schutz gegen Angriffe von außen
 
 - **Wer überhaupt drankommt:** Update now ist nur nach Login und nur für die eingestellte Rolle erreichbar (Standard: Superadmin), und auch dann nur mit erneuter Passworteingabe. Fehlversuche werden wie beim Login gebremst und protokolliert.

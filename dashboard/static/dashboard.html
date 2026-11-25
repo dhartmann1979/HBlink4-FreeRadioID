@@ -3127,7 +3127,15 @@
             connectWebSocket();
         }
 
+        // Abstürze (N8 Kit): Hinweisfenster nach der Anmeldung, bis die Befunde als gelesen markiert sind; Zähler im Admin-Menü
+        async function checkCrashes() {
+            const d = await N8Kit.sys.crashPopup({ req: api, open: () => openAdmin('sys-crashes'), onAck: () => { state.crashNew = 0; } });
+            state.crashNew = d ? d.unacked || 0 : 0;
+        }
+
         function renderUserArea() {
+            if (isAdmin() && !state.crashChecked) { state.crashChecked = true; setTimeout(() => checkCrashes(), 900); }
+            if (!isAdmin()) state.crashChecked = false;
             if (isAdmin() && !state.updateChecked) { state.updateChecked = true; setTimeout(() => checkUpdate(), 400); }
             if (!isAdmin()) { state.updateChecked = false; const b = document.getElementById('updateBanner'); if (b) b.hidden = true; }
             if (typeof tgsUpdateVisibility === 'function' && state.config) tgsUpdateVisibility();
@@ -3230,7 +3238,7 @@
                     { id: 'import', label: '📥 Import' }, { id: 'audit', label: '📜 Log' }] },
                 { id: 'zugang', label: G.zugang, items: [{ id: 'users', label: '👥 Users' }, { id: 'sessions', label: '🔑 Sessions' }] },
                 { id: 'darstellung', label: G.darstellung, items: [{ id: 'appearance', label: '🎨 Appearance' }, { id: 'links', label: '🔗 Links' }] },
-                { id: 'system', label: G.system, items: [{ id: 'system', label: '🖥️ Server & HTTPS' }, ...N8Kit.nav.SYS_ITEMS.map(([id, label]) => ({ id, label })),
+                { id: 'system', label: G.system, items: [{ id: 'system', label: '🖥️ Server & HTTPS' }, ...N8Kit.nav.SYS_ITEMS.map(([id, label]) => ({ id, label, ...(id === 'sys-crashes' && state.crashNew ? { badge: String(state.crashNew), badgeClass: 'bad' } : {}) })),
                     { id: 'backup', label: '💾 Backup' }] },
             ];
         }
