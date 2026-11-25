@@ -4,6 +4,23 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.15.0] – 2026-11-25
+
+### 🌐 Neue Rubrik „Netz, Ports & Domains“ – wie in N8 Crosslink
+- Alles zu Netz, HTTPS und Domains steht jetzt **nur noch** unter **🌐 Netz, Ports & Domains** (gleich in allen N8-Systemen):
+  - **🔌 Ports**: Web-Port, HTTP-/HTTPS-Port, DMR-Port (UDP), APRS-Server (Bind, Filter- und Full-Feed-Port) und APRS-Uplink – mit
+    *eingehend/ausgehend* und Protokoll, ein Knopf zum Speichern, Hinweis auf nötige Neustarts und **♻️ Dashboard neu starten**.
+  - **🔒 Domains & HTTPS**: Domain eintragen → Neustart → Zertifikat von Let's Encrypt; Tabelle mit DNS-Auflösung, Zertifikat
+    (gültig/Test/abgelaufen, bis wann, Aussteller), **🔄 Erneuern**, **Entfernen** und Schalter *HTTPS mit Let's Encrypt*. Die
+    APRS-Kartendomains stehen mit in der Liste (gleiches Zertifikat).
+- Entfernt: *Einstellungen → 🔒 HTTPS & web* und die HTTPS-Kachel unter *System* („Server & HTTPS“ heißt jetzt **🖥️ Server**).
+- Neue Adressen (gleich in allen N8-Systemen): `GET/POST /api/admin/ports`, `GET/POST /api/admin/domains`,
+  `POST /api/admin/domains/<domain>/renew`, `DELETE /api/admin/domains/<domain>`, `POST /api/admin/domains/options`.
+
+### 👥 Benutzer & Zugang – jetzt die gemeinsame Vorlage für alle N8-Systeme
+- **👥 Benutzer** und **🔑 Sitzungen** sehen aus wie bisher und sind jetzt die Ansicht des N8 Kit 1.4 (`N8Kit.access.view`), die
+  ADN-FRN-Server, N8 Hotspot, HobbyRadioPortal und N8 Crosslink genauso nutzen. Deutsch als Grundsprache, Englisch umschaltbar.
+
 ## [1.14.1] – 2026-11-25
 
 ### 🐛 Behoben: „Fehler -15“ beim Neustart des eigenen Dienstes (Admin → System → Dienste)

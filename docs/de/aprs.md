@@ -203,7 +203,7 @@ Unter **📡 APRS → Domains** trägst du bis zu **drei Domains** ein, z. B. `a
 
 So funktioniert das Zertifikat:
 
-1. Voraussetzung: **Settings → 🔒 HTTPS & web** ist eingeschaltet (Domain des Dashboards, z. B. `dmr.example.org`), Port 80 und 443 sind offen.
+1. Voraussetzung: **🌐 Netz, Ports & Domains → 🔒 Domains & HTTPS** ist eingeschaltet (Domain des Dashboards, z. B. `dmr.example.org`), Port 80 und 443 sind offen.
 2. Beim Start prüft das Dashboard per DNS, ob jede Karten-Domain auf **dieselbe Adresse** zeigt wie die Hauptdomain. Nur dann wird sie beantragt – eine falsch eingetragene Domain kann so das Zertifikat nicht kaputt machen; sie steht dann mit Grund im Log.
 3. Fehlt eine Domain im vorhandenen Zertifikat, holt das Dashboard sie im Hintergrund nach (`certbot … --expand`) und lädt das neue Zertifikat **ohne Neustart**. Danach wird es wie gewohnt automatisch erneuert.
 4. Die Übersicht im Adminbereich zeigt pro Domain **🔒 in certificate**, **⏳ not in certificate yet** oder **HTTP only**.
@@ -261,7 +261,7 @@ Alle Werte liegen in SQLite (`dashboard/data/dashboard.db`).
 | DMR-Station erscheint nicht | Funkgerät sendet kein GPS, ID ohne Rufzeichen, ID abgeschaltet, Datenruf mit Rate ¾ | `journalctl -u hblink4` zeigt gefundene Positionen (Zeilen mit „📍 DAPRS“); Übersicht → *ID without callsign*; im Funkgerät Rate ½ bzw. NMEA einstellen |
 | DMR-Station nur auf der Karte, nicht bei aprs.fi | Uplink aus/nicht verifiziert, Gast-Login, Intervall noch nicht um | Übersicht prüfen; *Not for guests* bzw. *Up at most every* |
 | Domain zeigt das Dashboard statt der Karte | Domain nicht eingetragen oder Dashboard noch nicht neu gestartet | **📡 APRS → Domains**, dann Dashboard neu starten |
-| Domain ohne HTTPS / Zertifikatswarnung | DNS zeigt nicht auf den Server (Log: `… is left out of the certificate`) oder HTTPS & web ist aus | DNS-Eintrag korrigieren, Dashboard neu starten; Übersicht zeigt den Status |
+| Domain ohne HTTPS / Zertifikatswarnung | DNS zeigt nicht auf den Server (Log: `… is left out of the certificate`) oder HTTPS ist aus (Netz, Ports & Domains) | DNS-Eintrag korrigieren, Dashboard neu starten; Übersicht zeigt den Status |
 | Keine Kartenkacheln | der Browser erreicht den Kachelserver nicht | anderen Kartenstil oder eigenen Kachelserver wählen |
 
 ## Technik

@@ -3246,7 +3246,8 @@
                     { id: 'import', label: '📥 Import' }, { id: 'audit', label: '📜 Log' }] },
                 { id: 'zugang', label: G.zugang, items: [{ id: 'users', label: '👥 Users' }, { id: 'sessions', label: '🔑 Sessions' }] },
                 { id: 'darstellung', label: G.darstellung, items: [{ id: 'appearance', label: '🎨 Appearance' }, { id: 'links', label: '🔗 Links' }] },
-                { id: 'system', label: G.system, items: [{ id: 'system', label: '🖥️ Server & HTTPS' }, ...N8Kit.nav.SYS_ITEMS.map(([id, label]) => ({ id, label, ...(id === 'sys-crashes' && state.crashNew ? { badge: String(state.crashNew), badgeClass: 'bad' } : {}) })),
+                { id: 'netz', label: G.netz, items: [{ id: 'ports', label: '🔌 Ports' }, { id: 'domains', label: '🔒 Domains & HTTPS' }] },
+                { id: 'system', label: G.system, items: [{ id: 'system', label: '🖥️ Server' }, ...N8Kit.nav.SYS_ITEMS.map(([id, label]) => ({ id, label, ...(id === 'sys-crashes' && state.crashNew ? { badge: String(state.crashNew), badgeClass: 'bad' } : {}) })),
                     { id: 'backup', label: '💾 Backup' }] },
             ];
         }
@@ -3258,10 +3259,8 @@
 
         // One line on top of the tabs that have no own heading
         const ADMIN_INTRO = {
-            users: ['👥 Users', 'Who may log in. Admins see IP addresses and ports and change settings; users only see the dashboard.'],
-            sessions: ['🔑 Sessions', 'All current logins. End one with „Revoke“ – that device is logged out at once.'],
             audit: ['📜 Log', 'Logins, failed attempts and every change in the admin area, with time, person and IP address.'],
-            system: ['🖥️ Server & HTTPS', 'State of HTTPS, access and the DMR server, plus restart buttons. Update, services, permissions and keep-alive are the next entries of the menu.'],
+            system: ['🖥️ Server', 'State of access and the DMR server, plus restart buttons. HTTPS, domains and ports are under 🌐 Network, ports & domains; update, services, permissions and keep-alive are the next entries of the menu.'],
         };
 
         function openAdmin(tab = 'users') {
@@ -3311,6 +3310,9 @@
             body.classList.remove('n8-sys');
             body.scrollTop = 0;
             if (base.startsWith('sys-')) { loadSysView(body, base.slice(4)); return; }
+            // 👥 Benutzer & 🔑 Sitzungen (Vorbild für alle N8-Systeme) und 🔌 Ports & 🔒 Domains (Vorbild N8 Crosslink): N8 Kit 1.4
+            if (base === 'users' || base === 'sessions') { N8Kit.access.view(body, base, accessOpts()); return; }
+            if (base === 'ports' || base === 'domains') { N8Kit.net.view(body, base, { req: api, toast: (m, bad) => toast(m, bad ? 'err' : 'ok') }); return; }
             body.innerHTML = '<div class="muted">Loading…</div>';
             try {
                 const intro = ADMIN_INTRO[base] ? `<div class="tab-intro"><h3 class="set-panel-title">${ADMIN_INTRO[base][0]}</h3>
@@ -3609,6 +3611,16 @@
                 (set in <code>dashboard/config.json</code>) can create admins.</p>`;
         }
 
+        function accessOpts() {
+            return {
+                req: api, me: state.me || {}, fields: ['display_name', 'dmr_id'], toast: (m, bad) => toast(m, bad ? 'err' : 'ok'),
+                roles: [{ id: 'superadmin', label: 'Superadmin', assign: 'none' }, { id: 'admin', label: 'Admin', assign: 'superadmin' }, { id: 'user', label: 'Benutzer', assign: 'all' }],
+                avatar: u => avatarHtml(u.dmr_id || 0, u.display_name || u.username, 26, u.dmr_id ? undefined : ''),
+                locked: (u, me) => u.role === 'superadmin' ? 'config.json' : (u.role === 'admin' && me.role !== 'superadmin' ? 'nur Superadmin' : ''),
+                note: 'Admins sehen IP-Adressen und verwalten Benutzer und Einstellungen. Nur der Superadmin (in dashboard/config.json) legt Admins an.',
+            };
+        }
+
         function editUserRow(id) {
             const row = document.getElementById(`edit-${id}`);
             row.hidden = !row.hidden;
@@ -3683,7 +3695,7 @@
 
         // ================= Settings: sub navigation, dependencies, advanced options =================
         // Sections with their own admin tab are not listed here.
-        const SET_CUSTOM = new Set(['appearance', 'links', 'dmr_obp', 'aprs_server', 'aprs_uplink', 'aprs_daprs', 'dmr_daprs', 'aprs_map', 'aprs_sites']);
+        const SET_CUSTOM = new Set(['https', 'appearance', 'links', 'dmr_obp', 'aprs_server', 'aprs_uplink', 'aprs_daprs', 'dmr_daprs', 'aprs_map', 'aprs_sites']);
         const setUi = { sections: null, current: null, advanced: false };
 
         function setIcon(title) { const m = title.match(/^(\S+)\s/); return m ? m[1] : '•'; }
@@ -4957,16 +4969,10 @@ PROTO_VER: ${fd ? 5 : 1}`;
         async function adminSystem() {
             const s = await api('GET', '/api/admin/system');
             const yes = '<span class="auth-ok">yes</span>', no = '<span class="muted">no</span>';
-            return `<div class="station-grid two">
-                <section class="tile"><h3>🔒 HTTPS</h3>
-                    ${infoRow('Enabled', s.https_enabled ? yes : no)}
-                    ${infoRow('This page over HTTPS', s.served_over_https ? yes : '<span class="auth-guest">no</span>')}
-                    ${infoRow('Domain', escapeHtml(s.domain || '—'))}
-                    ${infoRow('Certificate', s.letsencrypt ? "Let's Encrypt (automatic)" : 'own files')}
-                    ${infoRow('Valid until', escapeHtml(s.cert_expires || '—'))}
-                </section>
+            return `<div class="station-grid">
                 <section class="tile"><h3>👥 Access</h3>
                     ${infoRow('Public dashboard', s.public_dashboard ? 'yes (anyone can view)' : 'no (login required)')}
+                    ${infoRow('HTTPS', s.https_enabled ? (escapeHtml(s.domain || '') + ' · <a href="#" onclick="adminTab(\'domains\');return false">🔒 Domains &amp; HTTPS</a>') : '<a href="#" onclick="adminTab(\'domains\');return false">off – 🔒 Domains &amp; HTTPS</a>')}
                     ${infoRow('Superadmin', escapeHtml(s.superadmin || '— not set —'))}
                     ${infoRow('Accounts', s.users)}
                     ${infoRow('IP addresses', 'admins only')}

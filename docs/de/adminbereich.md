@@ -47,7 +47,8 @@ und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 | 📡 **Betrieb** | ⚙️ Einstellungen (Zweige: Abschnitte des Dashboards) · 🛰️ DMR-Server (Zweige: Abschnitte für HBlink4) · ↔️ OpenBridge · 📡 APRS (Zweige: Übersicht, Server, Uplink & Downlink, DAPRS, DMR → APRS, Karte, Domains) · 📥 Import · 📜 Protokoll |
 | 👥 **Benutzer & Zugang** | 👥 Benutzer · 🔑 Sitzungen |
 | 🎨 **Darstellung** | 🎨 Aussehen · 🔗 Links |
-| 🖥️ **System** | 🖥️ Server & HTTPS · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💥 Abstürze · 💾 Backup |
+| 🌐 **Netz, Ports & Domains** | 🔌 Ports · 🔒 Domains & HTTPS |
+| 🖥️ **System** | 🖥️ Server · ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive · 💥 Abstürze · 💾 Backup |
 
 Alle Gruppen sind **anfangs zugeklappt** – offen ist nur die Gruppe der gerade gewählten Seite; ein Klick auf eine Gruppe klappt sie auf (gemerkt bis zum Schließen des Browser-Tabs). Am Smartphone steht das Menü über dem Inhalt als aufklappbare
 Leiste „☰ *aktueller Bereich*“. Kacheln einer Reihe sind gleich hoch.
@@ -88,12 +89,10 @@ Seit **1.13.2** hängen die Abschnitte als Zweige im Baum-Menü: unter **⚙️ 
 | 📘 Callsign database | Quelle (**FreeRadioID.net**, Vorgabe, oder nur radioid.net), Länder, Uhrzeit des Updates, **⟳ Refresh now** | sofort; bei neuer Quelle oder neuen Ländern wird die Liste gleich neu geladen |
 | 📈 Talkgroups & statistics | Statistik an/aus, ohne Login sichtbar, Speicherdauer (Vorgabe 30 Tage), **Talkgroup-Liste der N8schicht** an/aus, **eigene Namen** (`26500 = N8schicht Ortsrunde`, eine pro Zeile); die URL der Liste unter *Advanced* | sofort |
 | 🛠️ Configuration tab | Tab an/aus, Server-Adresse für Hotspots (leer = Untertitel), Standard-Passwort zeigen ja/nein, **Hinweis für Nutzer** | sofort |
-| 🔒 HTTPS & web | HTTPS, Domain, E-Mail; Test-Zertifikate und Ports unter *Advanced* | nach **Neustart** des Dashboards |
 | ⬆️ Updates | Update-Hinweis an/aus, GitHub-Repository, wer **Update now** drücken darf; Branch und Prüfabstand (Standard 1 Stunde) unter *Advanced* | sofort |
 
 <p align="center">
   <img src="../images/admin-settings-tgstats.png" alt="Abschnitt Talkgroups &amp; statistics" width="49%">
-  <img src="../images/admin-settings-https.png" alt="Abschnitt HTTPS mit erweiterten Optionen" width="49%">
 </p>
 
 Die **Talkgroup-Namen** gelten für die Statistik, den Tab *Configuration* und den OpenBridge-Editor. Ältere Gespräche als die eingestellte Speicherdauer löscht das Dashboard jede Nacht. Ist die Statistik aus, wird nichts mehr gespeichert und der Tab **📈 Statistics** verschwindet.
@@ -293,16 +292,31 @@ Das Ergebnis ist nach Bereichen sortiert (DMR server, Access, OpenBridge, Links,
 
 Die genaue Umsetzung steht in [Anleitungen → Umziehen](anleitungen.md#2-von-hblink3-freedmr-oder-adn-umziehen).
 
-## 🔑 Sitzungen, 📜 Protokoll, 🖥️ Server & HTTPS
+## 🌐 Netz, Ports & Domains
+
+Seit **1.15.0** steht alles zu Netz, HTTPS und Domains **nur noch hier** – wie in N8 Crosslink und allen N8-Systemen (vorher unter
+*Einstellungen → HTTPS & web* und *System → Server & HTTPS*).
+
+<img src="../images/admin-ports.png" alt="Ports" width="49%"> <img src="../images/admin-domains.png" alt="Domains & HTTPS" width="49%">
+
+- **🔌 Ports**: alle Ports an einer Stelle – Web-Port, HTTP-/HTTPS-Port, DMR-Port (UDP), APRS-Server und -Uplink – jeweils mit
+  *eingehend* (in Firewall/Router freigeben) oder *ausgehend*. **💾 Ports speichern** übernimmt alles; was einen Neustart braucht,
+  steht danach unten, **♻️ Dashboard neu starten** erledigt ihn.
+- **🔒 Domains & HTTPS**: Domain des Dashboards eintragen → das Dashboard startet neu und holt das Zertifikat von Let's Encrypt selbst
+  (certbot im Webroot-Verfahren, ohne nginx). Tabelle mit DNS, Zertifikat (gültig/Test/abgelaufen, bis wann), **🔄 Erneuern**,
+  **Entfernen** und dem Schalter *HTTPS mit Let's Encrypt*. Die APRS-Kartendomains stehen mit in der Liste (sie kommen ins selbe
+  Zertifikat); Titel und Logo dazu weiter unter *Betrieb → APRS → Domains*.
+
+## 🔑 Sitzungen, 📜 Protokoll, 🖥️ Server
 
 <p align="center">
   <img src="../images/admin-sessions.png" alt="Sitzungen" width="49%">
-  <img src="../images/admin-system.png" alt="Server & HTTPS" width="49%">
+  <img src="../images/admin-system.png" alt="Server" width="49%">
 </p>
 
 - **Sitzungen**: alle Anmeldungen mit IP, Browser und Ablauf; jede lässt sich beenden.
 - **Protokoll**: Anmeldungen, Fehlversuche, Benutzer- und Einstellungsänderungen, Neustarts, jeweils mit Zeit, Person und IP.
-- **Server & HTTPS**: HTTPS mit Ablaufdatum des Zertifikats, Zugriff, Verbindung zum DMR-Server, FreeRadioID-IDs und gespeicherte
+- **Server**: HTTPS-Stand mit Verweis auf *🔒 Domains & HTTPS*, Zugriff, Verbindung zum DMR-Server, FreeRadioID-IDs und gespeicherte
   Avatare. Dazu die Knöpfe **Dashboard neu starten** und **DMR-Server neu starten**; sie erscheinen nur, wenn beides als systemd-Dienst läuft.
 
 ## ⬆️ Update · 🧩 Dienste · 🔐 Berechtigungen & sudo · 💓 Keep-Alive

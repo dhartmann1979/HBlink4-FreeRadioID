@@ -1863,6 +1863,172 @@ async def admin_restart(request: Request):
     return {"ok": True}
 
 
+# ---------------------------------------------------------------- 🌐 Netz, Ports & Domains (N8 Kit 1.4, Vorbild N8 Crosslink)
+# Alle Ports an einer Stelle; Web-Port, HTTP/HTTPS-Ports, HTTPS und die Domain stehen NUR hier (nicht mehr unter Einstellungen).
+_PORT_GROUPS = [
+    ("🌐 Webinterface", "Dashboard und Live-Daten. HTTP- und HTTPS-Port gelten nur mit HTTPS (Let's Encrypt prüft immer auf Port 80).", [
+        ("web.port", "Web-Port", "in", "TCP", "http://IP:Port des Dashboards (ohne HTTPS)"),
+        ("https.http_port", "HTTP-Port", "in", "TCP", "Let's-Encrypt-Prüfung und Weiterleitung auf HTTPS"),
+        ("https.port", "HTTPS-Port", "in", "TCP", "https:// der Domain (Standard 443)")]),
+    ("🛰️ DMR-Server (HBlink4)", "Hier verbinden sich Repeater, Hotspots und Apps.", [
+        ("dmr.global.port_ipv4", "DMR-Port", "in", "UDP", "HomeBrew-Standard 62031")]),
+    ("📡 APRS", "Nur wenn der APRS-Server eingeschaltet ist.", [
+        ("aprs.server.bind", "APRS-Adresse (Bind)", "in", "", "leer = alle Schnittstellen"),
+        ("aprs.server.port_filter", "APRS Filter-Port", "in", "TCP", "für APRS-Apps (Standard 14580)"),
+        ("aprs.server.port_full", "APRS Full-Feed-Port", "in", "TCP", "kompletter Datenstrom (Standard 10152)"),
+        ("aprs.uplink.aprsis.port", "APRS-IS (Uplink)", "out", "TCP", "zum APRS-IS-Server"),
+        ("aprs.uplink.cbaprs.port", "CB-APRS (Uplink)", "out", "TCP", "zum CB-APRS-Server")]),
+]
+NET_KEYS = {k for _, _, rows in _PORT_GROUPS for k, *_ in rows} | {"https.enabled", "https.domain", "https.email", "https.staging"}
+
+
+async def _apply_settings(request: Request, changes: dict) -> dict:
+    actor = _require_admin(request)
+    try:
+        changed = state.settings.update(dashboard_config, changes, actor["username"])
+    except SettingsError as e:
+        raise _HTTPError(400, str(e))
+    if changed:
+        state.auth.audit("settings_changed", actor["username"], ", ".join(changed), _client_ip(request))
+    await _after_settings_change(changed)
+    return _settings_result(changed)
+
+
+def _restart_text(r: dict) -> str:
+    if not r["changed"]:
+        return "Nichts geändert."
+    parts = ["Gespeichert: " + ", ".join(r["changed"])]
+    if r["restart_required"]:
+        parts.append("Das Dashboard braucht einen Neustart, damit das gilt.")
+    if r["dmr_restart_required"]:
+        parts.append("Der DMR-Server braucht einen Neustart, damit das gilt.")
+    return " ".join(parts)
+
+
+@app.get("/api/admin/ports")
+async def admin_ports(request: Request):
+    _require_admin(request)
+    groups = []
+    for title, help_, rows in _PORT_GROUPS:
+        groups.append({"title": title, "help": help_, "rows": [
+            {"key": k, "label": lab, "dir": d, "proto": pr, "help": h, "value": _get_cfg(k),
+             "kind": "text" if FIELD_BY_KEY[k].kind == "text" else "port", "min": FIELD_BY_KEY[k].min or 1}
+            for k, lab, d, pr, h in rows if k in FIELD_BY_KEY]})
+    return {"intro": "Alle Ports von HBlink4-FreeRadioID an einer Stelle. Eingehend: in Firewall und Router freigeben, wenn das von außen "
+                     "erreichbar sein soll. Ausgehend: die Gegenstelle muss erreichbar sein.",
+            "groups": groups, "restart": {"button": "Dashboard neu starten", "url": "/api/admin/restart"} if os.environ.get("INVOCATION_ID") else None}
+
+
+@app.post("/api/admin/ports")
+async def admin_ports_save(request: Request, body: dict = Body(...)):
+    vals = body.get("values") or {}
+    keys = {k for _, _, rows in _PORT_GROUPS for k, *_ in rows}
+    changes = {k: v for k, v in vals.items() if k in keys and k in FIELD_BY_KEY and v != _get_cfg(k)}
+    r = await _apply_settings(request, changes)
+    return {"ok": True, "message": _restart_text(r), **{k: r[k] for k in ("changed", "restart_required", "dmr_restart_required")}}
+
+
+def _cert_info() -> Optional[dict]:
+    if _tls_manager is None or not _tls_manager.have_cert():
+        return None
+    try:
+        import ssl as _ssl
+        from datetime import datetime as _dt
+        c = _ssl._ssl._test_decode_cert(str(_tls_manager.cert_file))
+        exp = _dt.strptime(c.get("notAfter", ""), "%b %d %H:%M:%S %Y %Z")
+        issuer = " ".join(v for part in c.get("issuer", ()) for k, v in part if k in ("organizationName", "commonName"))
+        return {"days": (exp - _dt.utcnow()).days, "expires": exp.strftime("%d.%m.%Y"), "issuer": issuer,
+                "staging": "STAGING" in issuer.upper() or "(STAGING)" in issuer.upper()}
+    except Exception:  # noqa: BLE001
+        return {"days": None, "expires": "", "issuer": "", "staging": False}
+
+
+def _dns(name: str) -> List[str]:
+    try:
+        return sorted({a[4][0] for a in socket.getaddrinfo(name, None)})
+    except OSError:
+        return []
+
+
+@app.get("/api/admin/domains")
+async def admin_domains(request: Request):
+    _require_admin(request)
+    h = dashboard_config.get("https") or {}
+    on, dom = bool(h.get("enabled")), str(h.get("domain") or "").strip().lower()
+    cert = _cert_info()
+    names = _tls_manager.cert_names() if _tls_manager else set()
+    sites = []
+    if dom:
+        sites.append({"domain": dom, "label": "Dashboard", "https": on and cert is not None, "cert": cert if on else None,
+                      "dns": await asyncio.to_thread(_dns, dom), "info": "" if on else "HTTPS ist aus"})
+    for d in _aprs_domains():
+        sites.append({"domain": d, "label": "APRS-Karte", "https": on and d in names, "cert": cert if on and d in names else None,
+                      "dns": await asyncio.to_thread(_dns, d), "info": "Titel und Logo unter Betrieb → APRS → Domains", "remove": False})
+    hint = ""
+    if on and not dom:
+        hint = "HTTPS ist an, aber es ist keine Domain eingetragen."
+    elif on and _tls_manager is None:
+        hint = "HTTPS ist eingeschaltet, läuft aber erst nach einem Neustart des Dashboards."
+    return {"intro": "Eigene Domain für das Dashboard mit kostenlosem Zertifikat von Let's Encrypt – das Dashboard macht HTTPS selbst "
+                     "(certbot im Webroot-Verfahren, ohne nginx). Die APRS-Kartendomains kommen mit ins selbe Zertifikat. Voraussetzung: "
+                     "die Domain zeigt per DNS auf diesen Server und der HTTP-Port (Let's Encrypt prüft immer auf 80) und der HTTPS-Port "
+                     "sind aus dem Internet erreichbar (siehe 🔌 Ports).",
+            "hint": hint, "sites": sites, "renew_auto": True if (on and _tls_manager is not None) else None,
+            "options": [{"key": "https.enabled", "label": "HTTPS mit Let's Encrypt", "value": on,
+                         "help": "Aus = nur http://IP:Web-Port. Ein- und Ausschalten startet das Dashboard neu."}],
+            "add": {"allowed": not dom, "email": h.get("email", ""), "staging": bool(h.get("staging")), "placeholder": "dmr.example.org",
+                    "button": "Domain eintragen & Zertifikat holen",
+                    "reason": "" if not dom else "Das Dashboard hat eine Domain. Zum Wechseln die bisherige erst entfernen."}}
+
+
+def _restart_soon() -> None:
+    if os.environ.get("INVOCATION_ID"):
+        import signal as _signal
+        asyncio.get_running_loop().call_later(1.0, os.kill, os.getpid(), _signal.SIGTERM)
+
+
+@app.post("/api/admin/domains")
+async def admin_domains_add(request: Request, body: dict = Body(...)):
+    dom = str(body.get("domain") or "").strip().lower().rstrip(".")
+    if not re.fullmatch(r"(?=.{4,253}$)([a-z0-9-]{1,63}\.)+[a-z]{2,63}", dom):
+        raise _HTTPError(400, "Keine gültige Domain")
+    r = await _apply_settings(request, {"https.domain": dom, "https.email": str(body.get("email") or "").strip(),
+                                         "https.staging": bool(body.get("staging")), "https.enabled": True})
+    _restart_soon()
+    return {"ok": True, "message": f"{dom} eingetragen, HTTPS ist an. Das Dashboard startet neu und holt das Zertifikat – "
+                                   f"in einer Minute unter https://{dom}/ öffnen." + ("" if os.environ.get("INVOCATION_ID") else
+                                   " (Nicht als systemd-Dienst gestartet – bitte von Hand neu starten.)"), **{"changed": r["changed"]}}
+
+
+@app.post("/api/admin/domains/{domain}/renew")
+async def admin_domains_renew(domain: str, request: Request):
+    _require_admin(request)
+    if _tls_manager is None:
+        raise _HTTPError(400, "HTTPS läuft noch nicht – erst einschalten und das Dashboard neu starten.")
+    ok = await _tls_manager.obtain() if not _tls_manager.have_cert() or _tls_manager.missing_names() else await _tls_manager.renew()
+    return {"ok": bool(ok) or _tls_manager.have_cert(), "message": "Zertifikat geholt bzw. aktuell." if ok or _tls_manager.have_cert()
+            else "certbot ist fehlgeschlagen – zeigt die Domain auf diesen Server und ist Port 80 von außen erreichbar? Einzelheiten im Log."}
+
+
+@app.delete("/api/admin/domains/{domain}")
+async def admin_domains_remove(domain: str, request: Request):
+    h = dashboard_config.get("https") or {}
+    if domain.strip().lower() != str(h.get("domain") or "").strip().lower():
+        raise _HTTPError(400, "Nur die Domain des Dashboards lässt sich hier entfernen (APRS-Domains unter APRS → Domains).")
+    await _apply_settings(request, {"https.domain": "", "https.enabled": False})
+    _restart_soon()
+    return {"ok": True, "message": f"{domain} entfernt, HTTPS ist aus. Das Dashboard startet neu und ist wieder unter http://IP:Web-Port erreichbar."}
+
+
+@app.post("/api/admin/domains/options")
+async def admin_domains_options(request: Request, body: dict = Body(...)):
+    if "https.enabled" not in body:
+        raise _HTTPError(400, "unbekannte Option")
+    await _apply_settings(request, {"https.enabled": bool(body["https.enabled"])})
+    _restart_soon()
+    return {"ok": True, "message": "HTTPS " + ("eingeschaltet" if body["https.enabled"] else "ausgeschaltet") + " – das Dashboard startet neu."}
+
+
 # ---------------------------------------------------------------- full backups
 _backup_lock = asyncio.Lock()
 _BACKUP_NAME = re.compile(r"(?:(?:backup-[0-9T-]+-[a-f0-9]{32}|before-restore-[0-9-]+)\.tar\.gz|auto-\d{8}T\d{6}Z-[a-f0-9]{32}\.tar\.gz\.age)\Z")
