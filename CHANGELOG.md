@@ -4,6 +4,21 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.12.3] – 2026-11-25
+
+### 🐛 Fix: „Version … antwortet nicht – zurück auf …“ bei jedem Update
+- Die Prüfung nach dem Update fragte nur `http://127.0.0.1:<Port>/api/version` und wertete nur 2xx/3xx. Läuft das Dashboard mit
+  **HTTPS auf eigenem Port**, auf einer **bestimmten Adresse** oder antwortet es mit 401/403, galt es als tot – das Update wurde
+  zurückgenommen, obwohl das Dashboard lief („auch 1.12.1 antwortet nicht“).
+- Jetzt zählt **jede HTTP-Antwort außer 5xx**; reicht das nicht, gilt das Dashboard als lebendig, wenn `hblink4-dash` läuft und sein
+  Prozess auf einem TCP-Port lauscht (`ss -ltnp`). Gewartet wird bis zu 2 Minuten.
+- **Zurücksetzen robuster:** vorher `git update-index --refresh` (Rechte-Korrektur ändert Zeitstempel – „Entry … not uptodate“),
+  eine liegengebliebene `index.lock` wird entfernt, notfalls `reset --hard` bzw. `checkout -f`; schlägt alles fehl, steht der Befehl im Protokoll.
+- N8 Admin-Kit: Keep-Alive-Grundlage (Timer, Prüfungen, Heartbeat) – eingeschaltet wird es mit der nächsten Version.
+
+> Wenn ein Update so abgebrochen ist (Stand gemischt): `cd /opt/HBlink4 && sudo rm -f .git/index.lock && sudo git -c safe.directory=/opt/HBlink4 fetch origin main && sudo git -c safe.directory=/opt/HBlink4 reset --hard origin/main && sudo ./scripts/n8-admin.sh fix-perms && sudo systemctl restart hblink4 hblink4-dash`
+> (Einstellungen und Daten liegen nicht im git – `config/config.json`, `dashboard/config.json`, `dashboard/data/` bleiben.)
+
 ## [1.12.2] – 2026-11-25
 
 ### 🐛 Fix: „sudo verweigert“ und „Installiert vX · ?“ nach dem Umstellen auf das N8 Admin-Kit
