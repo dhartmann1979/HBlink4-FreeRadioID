@@ -320,6 +320,12 @@ case "$DO_START" in
         ;;
 esac
 
+# Program owned by root, data by the service user; sudo rules, "Update now" and the check – the same as in the admin area
+if [ -x "$REPO_ROOT/scripts/n8-admin.sh" ] || [ -f "$REPO_ROOT/scripts/n8-admin.sh" ]; then
+    chmod 755 "$REPO_ROOT/scripts/n8-admin.sh"
+    "$REPO_ROOT/scripts/n8-admin.sh" fix-perms || warn "permissions: see above – later: sudo $REPO_ROOT/scripts/n8-admin.sh fix-perms"
+fi
+
 echo
 note "Done. Useful commands:"
 echo "  systemctl status hblink4 hblink4-dash"

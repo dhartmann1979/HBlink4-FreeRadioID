@@ -38,7 +38,7 @@ UNITS = ("hblink4.service", "hblink4-dash.service")
 EXCLUDED = {".git", "venv", ".venv", "env", "ENV", "__pycache__", ".pytest_cache",
             ".mypy_cache", ".ruff_cache", ".coverage", ".DS_Store", CONTROL,
             # N8 update guard: state of an update on THIS server – a clone must not inherit it
-            "update.pending", "update.pending.tmp", "update.result"}
+            "update.pending", "update.pending.tmp", "update.result", "update.request", "update.log", "n8-admin.json"}
 REQUIRED = {"app/hblink4/hblink.py", "app/dashboard/server.py", "app/config/config.json",
             "app/dashboard/config.json", "data/dashboard.db"}
 

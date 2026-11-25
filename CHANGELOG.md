@@ -4,6 +4,43 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.12.0] – 2026-11-25
+
+**🧩 Gleiches Update-System wie N8 Crosslink – mit Berechtigungsprüfer, sudo-Einrichtung und schlanker Dienste-Übersicht. HobbyRadioPortal-Anbindung und Umzug ins Portal entfernt.**
+
+### ⬆️ Update über den Root-Helfer `scripts/n8-admin.sh`
+- Gemeinsamer Helfer der N8schicht-Projekte (dieselbe Datei wie in N8 Crosslink und ADN-FRN-Server; Projektdaten in
+  `scripts/n8-admin.conf`).
+- **Update now** (weiter mit Passwortabfrage und Rechte-Einstellung *Who may press “Update now”*) legt nur `dashboard/data/update.request`
+  an; die Path-Unit `hblink4-update.path` startet `hblink4-update.service` als root → `n8-admin.sh update --auto`: nur vorspulen, Pakete bei
+  geänderten `requirements*`, **Berechtigungen und sudo prüfen/korrigieren**, beide Dienste neu starten, Dashboard prüfen – antwortet es
+  90 s nicht, **zurück auf den alten Stand**. Ergebnis unter *Letztes Update*, Protokoll unter *🖥️ System → 📜 Update-Protokoll*.
+- `scripts/update.sh` macht von der Konsole dasselbe (`--check` entfällt). Der alte *N8 update guard* (`n8-update-guard.sh`, `ExecStartPre`,
+  `n8_update_guard.py`) entfällt; das Update entfernt die Zeile aus der installierten Unit und die alte Regel `/etc/sudoers.d/hblink4-update`.
+- **Das Programmverzeichnis gehört jetzt root**; nur `dashboard/data`, `config/`, `logs/` und `dashboard/config.json` gehören dem
+  Dienst-Benutzer. `config.json` und Datenbanken 600.
+
+### 🔐 Berechtigungen & sudo · 🧩 Dienste (Adminbereich → 🖥️ System)
+- Prüfliste mit Abzeichen und **🛠️ Korrigieren**: Dienst-Benutzer, Programm root-eigen, Daten und Konfiguration, systemd-Units,
+  Update-Auslöser, `hblink4-dash` darf sudo (kein `NoNewPrivileges`, keine enge `CapabilityBoundingSet` – sonst Drop-in
+  `n8-admin.conf`), sudo installiert/eingebunden/gültig/aktuell/wirksam. Konsole: `sudo scripts/n8-admin.sh check-perms` / `fix-perms`.
+- Dienste `hblink4`, `hblink4-dash` und der Update-Auslöser schlank mit Status, **Autostart**-Schalter und **▶ / 🔄 / ⏹**.
+- sudo-Freigaben in `/etc/sudoers.d/hblink4-n8admin`, nur exakte Befehle. Die mitgelieferte `hblink4-dash.service` läuft deshalb mit
+  `NoNewPrivileges=no` und ohne `CapabilityBoundingSet` (nur `AmbientCapabilities=CAP_NET_BIND_SERVICE` bleibt).
+- API: `GET /api/admin/services`, `POST /api/admin/services/{unit}/{action}`, `GET /api/admin/perms`, `POST /api/admin/perms/fix`,
+  `GET /api/admin/update-log`; alles im Audit-Log. `install_services.sh` ruft am Ende `n8-admin.sh fix-perms` auf.
+
+### 🧹 HobbyRadioPortal entfernt
+- Keine lokale Portal-Schnittstelle mehr (`X-HobbyRadioPortal`, `HB4_PORTAL_LOCAL`, Pseudo-Benutzer „portal“, gesperrte
+  Portal-Einstellungen); alle Admin-Adressen brauchen eine Anmeldung.
+- **📦 Umzug ins HobbyRadioPortal** entfernt: Umzugscodes, `/api/admin/migration…`, `/api/migration/export`, `dashboard/migration.py`
+  (auch `portalize`). Backup, Wiederherstellung, Klonen und AutoBackup bleiben unverändert.
+- Doku bereinigt (Betrieb, Adminbereich, APRS, Backup, Installation, Sicherheit, README).
+
+### ⚠️ Einmalig nach dem Update
+- Von 1.11 oder älter: einmal `sudo /opt/HBlink4/scripts/n8-admin.sh fix-perms` (bzw. Pfad deiner Installation) – richtet Besitzer, sudo,
+  „Update now“ und die Drop-in-Datei für `hblink4-dash` ein; danach `sudo systemctl restart hblink4-dash`.
+
 ## [1.11.0] – 2026-11-25
 
 **🔌 HobbyRadioPortal ohne Token.** Läuft das Portal auf demselben Rechner, verwaltet es APRS und DAPRS direkt – kein Token anlegen,

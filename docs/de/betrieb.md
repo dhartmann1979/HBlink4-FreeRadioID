@@ -18,13 +18,7 @@ sudo journalctl -u hblink4 -u hblink4-dash -f          # live mitlesen
 ```
 
 > 💡 **Immer mit `sudo`.** Ohne `sudo` fragt systemd (polkit) nach einem Passwort und wartet. Das sieht dann so aus, als würde der Neustart „hängen“.
-> Soll der Dienst-Benutzer die Dienste ohne Passwort neu starten dürfen, hilft eine sudoers-Regel:
->
-> ```bash
-> echo 'hblink ALL=(root) NOPASSWD: /usr/bin/systemctl restart hblink4, /usr/bin/systemctl restart hblink4-dash, /usr/bin/systemctl restart hblink4 hblink4-dash' \
->   | sudo tee /etc/sudoers.d/hblink4 && sudo chmod 440 /etc/sudoers.d/hblink4 && sudo visudo -c
-> ```
-> (`hblink` durch deinen Dienst-Benutzer ersetzen.)
+> Im Dashboard geht es ohne Passwort unter **🖥️ System → 🧩 Dienste** (sudo-Freigaben von `scripts/n8-admin.sh`).
 
 Aus dem Browser geht es auch: **Adminbereich → System → Restart dashboard / Restart DMR server**.
 
@@ -71,14 +65,36 @@ Zu jedem Problem steht die passende Lösung mit **→** dahinter. Am Ende steht 
 Der Server fragt jede Stunde bei GitHub nach einer neuen Version. Eingeloggte Admins sehen dann einen Hinweis und können mit **⬇️ Update now** direkt im Browser installieren (siehe [Adminbereich → Update now](adminbereich.md#️-update-now)). Auf der Konsole geht es (ab 1.10.0) mit einem Befehl:
 
 ```bash
-sudo /opt/HBlink4/scripts/update.sh            # holen, Pakete bei Bedarf, Rechte prüfen, beide Dienste neu starten
-sudo /opt/HBlink4/scripts/update.sh --check    # nur prüfen: {"current", "latest", "behind", "notes"}
+sudo /opt/HBlink4/scripts/update.sh            # genau wie „Update now“: holen, Pakete, Rechte & sudo, Neustart, Prüfung
 ```
 
-`update.sh` spult nur vor (fast-forward) – nie über von Hand geänderte Dateien oder eigene Commits –, installiert Python-Pakete nur bei
-geänderten `requirements*`, setzt Besitzer (Dienst-Benutzer) und Rechte neu, startet `hblink4` und `hblink4-dash` neu und schaltet den
-**N8 update guard** scharf: Kommt das Dashboard nach drei Starts nicht hoch, geht es automatisch auf den alten Stand zurück.
-Dasselbe Skript nutzt das **HobbyRadioPortal** unter *Admin → System → 🧩 Dienste* (auch *Alle aktualisieren*).
+Seit 1.12.0 läuft das Update wie in N8 Crosslink über den Root-Helfer **`scripts/n8-admin.sh`**: **Update now** im Dashboard legt nur
+`dashboard/data/update.request` an, die Path-Unit `hblink4-update.path` startet `hblink4-update.service` als root und damit
+`n8-admin.sh update --auto`. Der Helfer spult nur vor (nie über von Hand geänderte Dateien oder eigene Commits), installiert
+Python-Pakete bei geänderten `requirements*`, **prüft und korrigiert Berechtigungen und sudo**, startet `hblink4` und `hblink4-dash`
+neu und ruft das Dashboard auf. Antwortet es 90 Sekunden nicht, geht er automatisch auf den alten Stand zurück. Ergebnis unter
+*Letztes Update*, Protokoll unter **🖥️ System → 📜 Update-Protokoll** (`dashboard/data/update.log`).
+
+Das Programmverzeichnis gehört dabei **root** und ist für den Dienst schreibgeschützt; nur `dashboard/data`, `config/`, `logs/` und
+`dashboard/config.json` gehören dem Dienst-Benutzer. Einmalig nach dem Update von 1.11 oder älter:
+
+```bash
+sudo /opt/HBlink4/scripts/n8-admin.sh fix-perms
+```
+
+### Dienste und Berechtigungen
+
+<p align="center"><img src="../images/admin-services.png" alt="Dienste und Berechtigungen" width="90%"></p>
+
+**🖥️ System → 🧩 Dienste** zeigt `hblink4`, `hblink4-dash` und den Update-Auslöser schlank mit Status, **Autostart**-Schalter und
+**▶ Starten / 🔄 Neu starten / ⏹ Stoppen**. Daneben **🔐 Berechtigungen & sudo**: alle Prüfungen von `n8-admin.sh` (Dienst-Benutzer,
+Programm root-eigen, Daten und Konfiguration des Dienstes, `config.json` und Datenbanken 600, systemd-Units, Update-Auslöser,
+sudo installiert/eingebunden/gültig/aktuell/wirksam) mit **🛠️ Korrigieren** (prüfen → korrigieren → erneut prüfen). Konsole:
+`sudo scripts/n8-admin.sh check-perms` bzw. `fix-perms`.
+
+Die sudo-Freigaben stehen in `/etc/sudoers.d/hblink4-n8admin` – nur exakte Befehle (die Dienste, die Prüfung, der Update-Auslöser).
+Damit das Dashboard sudo nutzen kann, läuft `hblink4-dash` ohne `NoNewPrivileges` und ohne enge `CapabilityBoundingSet`; der Helfer setzt
+das bei Bedarf per Drop-in (`hblink4-dash.service.d/n8-admin.conf`). Die frühere Regel `/etc/sudoers.d/hblink4-update` entfällt.
 
 Vorher eine [Sicherung](#sicherung) zu machen schadet nie. Die Einstellungen aus dem Adminbereich liegen in der Datenbank und bleiben erhalten. Welche Version läuft, steht unten in der Fußzeile jeder Seite und im Adminbereich unter **🖥️ System**.
 
@@ -90,63 +106,6 @@ sudo -u hblink git reset --hard <alter-commit>
 sudo systemctl restart hblink4 hblink4-dash
 ```
 
-### Neustart nach dem Update und sudoers
-
-Für **Update now** gibt es zwei Wege, die Dienste neu zu starten. Das Dashboard nimmt automatisch den, der funktioniert; unter **🖥️ System → Restart after update** steht, welcher es ist.
-
-**Weg A – ohne sudo (empfohlen, nichts einzurichten):** Die mitgelieferten Dienste haben `Restart=always`. Nach dem Update beenden sich HBlink4 und das Dashboard selbst, und systemd startet sie nach 10 Sekunden wieder. Dafür braucht das Dashboard keinerlei Root-Rechte, und die Härtung der Dienste (`NoNewPrivileges=true`, `CapabilityBoundingSet=`) bleibt an. Einzige Bedingung: HBlink4 muss in dem Moment mit dem Dashboard verbunden sein (in der Statusleiste hat **DMR server** einen grünen Punkt), sonst startet nur das Dashboard neu; der Dialog sagt das dann.
-
-**Weg B – `systemctl` über sudo:** Wer lieber ein echtes `systemctl restart` will (z. B. weil `Restart=always` geändert wurde), erlaubt dem Dienst-Benutzer genau **einen** Befehl ohne Passwort. Im Beispiel heißt der Benutzer `hblink`; nimm den aus `User=` in `/etc/systemd/system/hblink4-dash.service`.
-
-1. Regel anlegen – immer mit `visudo`, das prüft die Syntax vor dem Speichern (ein Tippfehler in sudoers kann sonst sudo komplett sperren):
-
-   ```bash
-   sudo visudo -f /etc/sudoers.d/hblink4-update
-   ```
-
-   Inhalt (genau so, eine Zeile pro Eintrag):
-
-   ```
-   # HBlink4 "Update now": darf genau diese beiden Dienste neu starten – sonst nichts
-   Cmnd_Alias HBLINK4_RESTART = /usr/bin/systemctl --no-block restart hblink4.service hblink4-dash.service
-   hblink ALL=(root) NOPASSWD: HBLINK4_RESTART
-   ```
-
-2. Rechte und Syntax prüfen:
-
-   ```bash
-   sudo chmod 0440 /etc/sudoers.d/hblink4-update
-   sudo visudo -c
-   ```
-
-3. Testen, ob die Regel greift (zeigt den Befehl, startet nichts neu):
-
-   ```bash
-   sudo -u hblink sudo -n -l /usr/bin/systemctl --no-block restart hblink4.service hblink4-dash.service
-   ```
-
-4. Die Härtung des **Dashboard-Dienstes** lässt sudo nicht zu (`NoNewPrivileges` verbietet jedes Hochstufen der Rechte). Für Weg B muss sie für diesen einen Dienst gelockert werden:
-
-   ```bash
-   sudo systemctl edit hblink4-dash
-   ```
-
-   ```ini
-   [Service]
-   NoNewPrivileges=no
-   CapabilityBoundingSet=~
-   AmbientCapabilities=CAP_NET_BIND_SERVICE
-   ```
-
-   Danach `sudo systemctl restart hblink4-dash`. Unter **🖥️ System** steht jetzt *systemctl via sudo*.
-
-Warum das so eng ist:
-- Die Regel erlaubt **nur diesen exakten Befehl** mit genau diesen Argumenten. `systemctl stop`, andere Dienste, `systemctl edit` oder eine Shell bleiben verboten. sudo vergleicht die ganze Befehlszeile, deshalb **keine** Platzhalter wie `*` in die Regel schreiben.
-- Immer den vollen Pfad `/usr/bin/systemctl` angeben. Liegt `systemctl` bei dir woanders (`command -v systemctl`), passt die Regel nicht; dann nimmt das Dashboard automatisch Weg A.
-- Den Dienst-Benutzer **nie** in die Gruppe `sudo` aufnehmen und **kein** `NOPASSWD: ALL` eintragen. Dann könnte jeder, der das Dashboard übernimmt, den ganzen Server übernehmen.
-- Weg B lockert die Härtung des Dashboards. Wer nicht ausdrücklich `systemctl` braucht, bleibt bei Weg A.
-
-**Regel wieder entfernen:** `sudo rm /etc/sudoers.d/hblink4-update` und `sudo systemctl revert hblink4-dash`.
 
 ### Schutz gegen Angriffe von außen
 
@@ -155,20 +114,6 @@ Warum das so eng ist:
 - **Woher der Code kommt:** Installiert wird nur aus dem Git-Remote, das auf dem Server eingerichtet ist, und nur der Commit, den GitHub gemeldet hat. Es geht nur vorwärts; Hooks und lokale Transporte sind aus. Zum Prüfen: `git -C /opt/HBlink4 remote -v`.
 - **Rechte:** Das Dashboard läuft als normaler Benutzer ohne Root. Mit Weg B darf es höchstens die beiden Dienste neu starten.
 - **Abschalten:** Wer Updates nur auf der Konsole will, stellt *Who may press “Update now”* auf **Nobody**. Der Hinweis bleibt, installiert wird dann nur von Hand.
-
-## Im HobbyRadioPortal
-
-Das [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) zeigt DMR und APRS als Plugins (`dmr`, `aprs`).
-Es liest dafür nur die öffentlichen Schnittstellen dieses Dashboards: `/api/version`, `/api/repeaters`, `/api/streams`,
-`/api/stats`, `/api/openbridge`, `/api/outbounds`, **`/api/last-heard`** (seit 1.6.2: dieselbe Liste wie *Last Heard* im
-Dashboard, IP-Adressen nur für Admins), `/api/aprs/status` und `/api/aprs/stations`. Im Portal unter
-*Admin → Dienste & Plugins* die Adresse eintragen (meist `http://127.0.0.1:8080/`).
-
-**APRS und DAPRS im Portal verwalten:** Läuft das Portal auf demselben Rechner, stellt es – **ohne Token** (seit 1.11.0) – unter
-*Admin → Dienste → APRS* alles ein, was hier im Tab *📡 APRS* steht – APRS-Server, Uplink & Downlink, DAPRS (beide
-Seiten: Erkennen im DMR-Server und Weitergabe an APRS), Repeater-Objekte, Karte, APRS-Domains – und zeigt die verbundenen Clients
-(trennen), Neustart, Objekte senden und den Passcode-Rechner. Das Portal nutzt dafür `/api/admin/settings` (nur die APRS-Bereiche)
-und `/api/admin/aprs…`. Was das Portal darf: [Sicherheit → HobbyRadioPortal](sicherheit.md#hobbyradioportal-auf-diesem-server-ohne-token).
 
 ## Sicherung
 

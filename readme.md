@@ -49,6 +49,7 @@ Ein DMR-Server für Repeater, Hotspots und Apps wie Z3DMR (HomeBrew-Protokoll, z
 | 📘 **FreeRadioID-ID-Listen** | Rufzeichen kommen standardmäßig aus der Liste von FreeRadioID.net (radioid.net plus FreeRadioID-IDs). |
 | 📡 **APRS & DAPRS** *(neu in 1.2.0)* | APRS-Server in Python (Ports 14580/10152), **Uplink & Downlink wählbar: APRS-IS, CB-APRS oder eigene Server**, **DAPRS**: GPS-Positionen von DMR-Funkgeräten (im Sprachruf und als Datenruf, NMEA/LRRP) werden APRS-Positionen, Repeater als Objekte. Live-**Karte** im N8-Design unter `/aprs`, als Dashboard-Tab und unter **bis zu drei eigenen Domains** mit Let's Encrypt. Standardmäßig aus, die Installation fragt es ab. |
 | 🔒 **HTTPS** | Let's-Encrypt-Zertifikat, automatisch geholt und erneuert – auch für die APRS-Domains |
+| 🧩 **Update, Dienste & Berechtigungen** *(neu in 1.12.0)* | **Update now** mit Prüfung und automatischem Zurück, Dienste schlank aktivieren/deaktivieren/starten/stoppen/neu starten, Berechtigungsprüfer mit Korrektur und sudo-Einrichtung – derselbe Helfer `scripts/n8-admin.sh` wie in N8 Crosslink und ADN-FRN-Server ([mehr](docs/de/betrieb.md#dienste-und-berechtigungen)) |
 | 🧭 **Geführte Installation** | `scripts/setup.sh` fragt alles ab, richtet die Dienste ein und prüft am Ende das Ergebnis. |
 
 <p align="center">
@@ -126,7 +127,7 @@ Das Installationsskript führt durch alle Einstellungen. Jede Frage hat eine Vor
 | 🧭 [Anleitungen](docs/de/anleitungen.md) | Schritt für Schritt: Hotspot verbinden, Umzug mit dem Import, OpenBridge zu FreeDMR, Logo und Farben, Link-Menü, Ankündigung, Admins |
 | 📡 [APRS](docs/de/aprs.md) | APRS-Server, Uplink & Downlink (APRS-IS, CB-APRS, manuell), DAPRS, Karte, eigene Domains mit Let's Encrypt, Fehlersuche |
 | ⚙️ [Adminbereich](docs/de/adminbereich.md) | Anmelden, Rollen, Benutzer, Einstellungen, Aussehen, Link-Menü, OpenBridge-Editor, Backup, Import, Sitzungen, Protokoll, System |
-| 💾 [Backup und Klonen](docs/de/backup.md) | Vollständige Sicherung, Download, Archivprüfung und Wiederherstellung auf einem anderen HBlink4-Server; **📦 Umzug ins HobbyRadioPortal** per Umzugscode; [verschlüsselte AutoBackups](docs/de/autobackup.md) nach SFTP/Google Drive |
+| 💾 [Backup und Klonen](docs/de/backup.md) | Vollständige Sicherung, Download, Archivprüfung und Wiederherstellung auf einem anderen HBlink4-Server; [verschlüsselte AutoBackups](docs/de/autobackup.md) nach SFTP/Google Drive |
 | 🧾 [Konfiguration](docs/de/konfiguration.md) | Was in den Dateien steht und was in SQLite, alle Einstellungen im Überblick, Patterns |
 | 🛡️ [FreeRadioID](docs/de/freeradioid.md) | Secure Login, Gastzugang, Avatare, Profile, ID-Listen |
 | 🔐 [Sicherheit & N8 Kit](docs/de/sicherheit.md) | Sicherheits-Header, API-Doku aus, Schutz vor XSS, Reverse-Proxy (Caddy/nginx), Sprache DE/EN, Updates mit Prüfung und Rollback |

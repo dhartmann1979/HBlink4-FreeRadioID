@@ -9,7 +9,7 @@ import time
 import unittest
 from pathlib import Path
 
-from dashboard import n8_security, n8_update_guard as guard
+from dashboard import n8_security
 from dashboard.auth import AuthStore
 from hblink4.hblink import _clean_text_field
 
@@ -73,58 +73,21 @@ class TestCleanTextField(unittest.TestCase):
         self.assertEqual(_clean_text_field(b"A\x1bB\x7f\x00").rstrip(b" "), b"AB\x00")
 
 
-class TestUpdateGuard(unittest.TestCase):
-    def repo(self):
-        d = Path(tempfile.mkdtemp())
-        r = d / "repo"
-        subprocess.run(["git", "init", "-q", str(r)], check=True)
-        g = ["git", "-C", str(r), "-c", "user.name=t", "-c", "user.email=t@t"]
-        subprocess.run(g + ["commit", "-q", "--allow-empty", "-m", "a"], check=True)
-        old = subprocess.check_output(["git", "-C", str(r), "rev-parse", "HEAD"], text=True).strip()
-        (r / "f").write_text("new")
-        subprocess.run(["git", "-C", str(r), "add", "f"], check=True)
-        subprocess.run(g + ["commit", "-q", "-m", "b"], check=True)
-        new = subprocess.check_output(["git", "-C", str(r), "rev-parse", "HEAD"], text=True).strip()
-        st = d / "state"
-        return r, st, old, new
+class TestN8Admin(unittest.TestCase):
+    """Update, Rechte-Check, sudo und Dienste über scripts/n8-admin.sh (wie N8 Crosslink) – ohne den alten update guard."""
 
-    def test_rollback_after_three_starts(self):
-        r, st, old, new = self.repo()
-        guard.mark_pending(st, old, new, "1.4.0", "1.5.0")
-        for _ in range(4):
-            subprocess.run(["sh", str(ROOT / "scripts" / "n8-update-guard.sh"), str(r), str(st)], check=True,
-                           capture_output=True)
-        head = subprocess.check_output(["git", "-C", str(r), "rev-parse", "HEAD"], text=True).strip()
-        self.assertEqual(head, old)
-        res = guard.last_result(st)
-        self.assertFalse(res["ok"])
-        self.assertEqual((res["from"], res["to"]), ("1.4.0", "1.5.0"))
-        self.assertFalse(guard.pending(st))
-
-    def test_no_pending_nothing_happens(self):
-        r, st, old, new = self.repo()
-        p = subprocess.run(["sh", str(ROOT / "scripts" / "n8-update-guard.sh"), str(r), str(st)], capture_output=True)
-        self.assertEqual(p.returncode, 0)
-        self.assertIsNone(guard.last_result(st))
-
-    def test_startup_check_confirms(self):
-        import http.server
-        import threading
-        srv = http.server.HTTPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
-        threading.Thread(target=srv.serve_forever, daemon=True).start()
-        try:
-            st = Path(tempfile.mkdtemp())
-            guard.mark_pending(st, "a" * 40, "b" * 40, "1.4.0", "1.5.0")
-            res = asyncio.run(guard.startup_check(st, guard.local_url("0.0.0.0", srv.server_port, "/"), timeout=10, delay=0))
-            self.assertTrue(res["ok"])
-            self.assertFalse(guard.pending(st))
-            self.assertEqual(guard.last_result(st)["to"], "1.5.0")
-        finally:
-            srv.shutdown()
-
-    def test_unit_runs_the_guard(self):
+    def test_wired(self):
+        import subprocess
         unit = (ROOT / "hblink4-dash.service").read_text()
-        self.assertIn("ExecStartPre=-/bin/sh scripts/n8-update-guard.sh", unit)
+        self.assertNotIn("n8-update-guard", unit)
+        self.assertIn("NoNewPrivileges=no", unit)
+        self.assertNotIn("CapabilityBoundingSet=CAP_NET_BIND_SERVICE", unit)
+        self.assertIn('n8-admin.sh" update', (ROOT / "scripts" / "update.sh").read_text())
+        conf = (ROOT / "scripts" / "n8-admin.conf").read_text()
+        self.assertIn("N8_ID=hblink4", conf)
+        for f in ("n8-admin.sh", "n8-admin.conf", "update.sh", "install_services.sh"):
+            self.assertEqual(subprocess.run(["bash", "-n", str(ROOT / "scripts" / f)]).returncode, 0, f)
+        self.assertIn("n8-admin.sh\" fix-perms", (ROOT / "scripts" / "install_services.sh").read_text())
 
 
 class TestKitFiles(unittest.TestCase):

@@ -976,6 +976,7 @@
         }
 
         /* FreeRadioID login state */
+        .auth-bad { color: #ff6b61; font-weight: 700; }
         .auth-badge {
             display: inline-flex;
             align-items: center;
@@ -1574,6 +1575,13 @@
                           border-radius: 12px; font-size: 13px; background: rgba(255, 159, 10, 0.12); border: 1px solid rgba(255, 159, 10, 0.45); }
         .restart-banner[hidden] { display: none; }
         .switch { position: relative; display: inline-block; width: 40px; height: 23px; }
+        .svc-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .svc-tbl td { padding: 6px 6px; border-top: 1px solid rgba(255,255,255,.06); vertical-align: middle; }
+        .svc-tbl tr:first-child td { border-top: 0; }
+        .svc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; background: #8e8e93; }
+        .svc-dot.on { background: var(--green, #30d158); box-shadow: 0 0 8px rgba(48,209,88,.6); }
+        .svc-dot.bad { background: #ff453a; }
+        .term-out { margin-top: 10px; max-height: 260px; overflow: auto; font-size: 11.5px; white-space: pre-wrap; background: rgba(0,0,0,.3); padding: 10px; border-radius: 10px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .switch span { position: absolute; inset: 0; cursor: pointer; border-radius: 999px; background: rgba(255, 255, 255, 0.16);
                        transition: background 0.2s; }
@@ -4871,8 +4879,58 @@ PROTO_VER: ${fd ? 5 : 1}`;
             N8Kit.update.panel(el, k, { onCheck: () => sysUpdCheck(true), onInstall: () => openUpdateDialog() });
         }
 
+        // ---------- Services, permissions & sudo, update log (scripts/n8-admin.sh) ----------
+        const SVC_STATE = { active: 'running', inactive: 'stopped', failed: 'failed', activating: 'starting', deactivating: 'stopping' };
+        function renderServices(d) {
+            const el = document.getElementById('svcList'); if (!el) return;
+            if (!d.units.length) { el.innerHTML = '<div class="muted">Not set up yet – run once on the console: <code>sudo scripts/n8-admin.sh fix-perms</code></div>'; return; }
+            const cls = a => a === 'active' ? 'auth-ok' : a === 'failed' ? 'auth-bad' : 'auth-guest';
+            const b = (u, a, icon, title) => u.actions.includes(a) ? `<button class="btn-s" title="${title}" onclick="svcAction('${escapeHtml(u.unit)}','${a}',this)">${icon}</button>` : '';
+            el.innerHTML = `<table class="svc-tbl"><tbody>${d.units.map(u => `<tr>
+                <td><span class="svc-dot ${u.active === 'active' ? 'on' : u.active === 'failed' ? 'bad' : ''}"></span><b>${escapeHtml(u.label)}</b><div class="muted mono" style="font-size:11.5px">${escapeHtml(u.unit)}</div></td>
+                <td><span class="${cls(u.active)}">${escapeHtml(SVC_STATE[u.active] || u.active)}</span></td>
+                <td>${u.actions.includes('enable') ? `<label class="switch" title="Autostart at boot"><input type="checkbox" ${u.enabled === 'enabled' ? 'checked' : ''} onchange="svcAction('${escapeHtml(u.unit)}', this.checked ? 'enable' : 'disable', this)"><span></span></label> <span class="muted">Autostart</span>` : `<span class="muted">${escapeHtml(u.enabled)}</span>`}</td>
+                <td style="text-align:right;white-space:nowrap">${u.active === 'active' ? b(u, 'restart', '🔄', 'Restart') + b(u, 'stop', '⏹', 'Stop') : b(u, 'start', '▶', 'Start')}</td></tr>`).join('')}</tbody></table>`;
+        }
+        async function loadServices() { try { renderServices(await api('GET', '/api/admin/services')); } catch (e) { const el = document.getElementById('svcList'); if (el) el.innerHTML = `<div class="muted">⚠️ ${escapeHtml(e.message)}</div>`; } }
+        async function svcAction(unit, action, el) {
+            if (['stop', 'disable'].includes(action)) {
+                const self = unit === 'hblink4-dash.service';
+                const msg = action === 'stop' ? (self ? 'Stop the dashboard? It is gone afterwards – start it again on the console: sudo systemctl start hblink4-dash' : `Stop ${unit}? Repeaters and hotspots lose the connection.`) : `Switch off autostart of ${unit}? After a reboot it does not start by itself.`;
+                if (!confirm(msg)) { if (el && el.type === 'checkbox') el.checked = true; return; }
+            }
+            if (el) el.disabled = true;
+            try { const r = await api('POST', `/api/admin/services/${encodeURIComponent(unit)}/${action}`, {}); toast('✓ ' + (r.message || action), 'ok'); renderServices(r); }
+            catch (e) { toast(e.message, 'bad'); loadServices(); }
+        }
+        const PERM_AREA = { user: '👤 Service user', prog: '📦 Program', data: '💾 Data', systemd: '⚙️ systemd', sudo: '🛡️ sudo' };
+        function renderPerms(d) {
+            const el = document.getElementById('permList'), rows = d.checks || [];
+            document.getElementById('permBadge').innerHTML = !rows.length ? '<span class="auth-guest">not checked</span>' : d.bad ? `<span class="auth-bad">${d.bad} errors</span>` : '<span class="auth-ok">all fine</span>';
+            if (!rows.length) { el.innerHTML = `<div class="muted">${escapeHtml(d.message || '–')}</div>`; return; }
+            const areas = [...new Set(rows.map(c => c.area))];
+            el.innerHTML = `<div style="max-height:320px;overflow:auto"><table class="svc-tbl"><tbody>${areas.map(a => rows.filter(c => c.area === a).map((c, i) =>
+                `<tr><td style="width:120px">${i ? '' : `<b>${escapeHtml(PERM_AREA[a] || a)}</b>`}</td><td style="width:22px">${c.status === 'ok' ? '✅' : c.status === 'warn' ? '⚠️' : '❌'}</td>
+                 <td class="${c.status === 'bad' ? '' : 'muted'}">${escapeHtml(c.text)}</td></tr>`).join('')).join('')}</tbody></table></div>`;
+        }
+        async function loadPerms() {
+            const el = document.getElementById('permList'); if (!el) return; el.innerHTML = '<span class="muted">checking…</span>';
+            try { renderPerms(await api('GET', '/api/admin/perms')); } catch (e) { el.innerHTML = `<div class="muted">⚠️ ${escapeHtml(e.message)}</div>`; }
+        }
+        async function fixPerms(btn) {
+            btn.disabled = true; const out = document.getElementById('permOut'); out.hidden = false; out.textContent = 'checking and fixing…';
+            try { const r = await api('POST', '/api/admin/perms/fix', {}); out.textContent = r.message || ''; if (r.check) renderPerms(r.check); toast(r.ok ? 'Permissions are fine' : 'Not everything could be fixed', r.ok ? 'ok' : 'bad'); loadServices(); }
+            catch (e) { out.textContent = e.message; toast(e.message, 'bad'); }
+            btn.disabled = false;
+        }
+        async function showUpdateLog() {
+            const out = document.getElementById('permOut'); out.hidden = false;
+            try { const d = await api('GET', '/api/admin/update-log'); out.textContent = d.log || 'No update from the dashboard yet.'; out.scrollTop = out.scrollHeight; } catch (e) { out.textContent = e.message; }
+        }
+
         async function adminSystem() {
             setTimeout(() => sysUpdCheck(false), 50);
+            setTimeout(() => { loadServices(); loadPerms(); }, 80);
             const s = await api('GET', '/api/admin/system');
             const yes = '<span class="auth-ok">yes</span>', no = '<span class="muted">no</span>';
             return `<div class="station-grid two">
@@ -4896,6 +4954,16 @@ PROTO_VER: ${fd ? 5 : 1}`;
                 <section class="tile" id="sysVersion"><h3>⬆️ Updates</h3>
                     <div id="sysUpd">${infoRow('GitHub', '<span class="muted">checking…</span>')}</div>
                 </section></div>
+                <div class="station-grid two" style="margin-top:14px">
+                <section class="tile"><h3>🧩 Services</h3>
+                    <p class="muted" style="font-size:12.5px;margin:0 0 8px">Status, autostart at boot and start, stop, restart – only the services released for this dashboard.</p>
+                    <div id="svcList"><span class="muted">loading…</span></div></section>
+                <section class="tile"><h3>🔐 Permissions &amp; sudo <span id="permBadge"></span></h3>
+                    <p class="muted" style="font-size:12.5px;margin:0 0 8px">Checks the service user, program and data permissions, systemd units and the sudo rules. <b>Fix</b> repairs what is wrong and checks again. Console: <code>sudo scripts/n8-admin.sh check-perms</code> / <code>fix-perms</code>.</p>
+                    <div id="permList"><span class="muted">checking…</span></div>
+                    <div class="set-actions" style="justify-content:flex-start;margin-top:8px"><button class="btn-s" onclick="loadPerms()">🔍 Check again</button>
+                        <button class="btn-s btn-primary" onclick="fixPerms(this)">🛠️ Fix</button><button class="btn-s" onclick="showUpdateLog()">📜 Update log</button></div>
+                    <pre id="permOut" class="term-out" hidden></pre></section></div>
                 <div class="set-actions" style="justify-content:flex-start">
                     <button class="btn-s" onclick="adminTab('settings')">⚙️ Change settings</button>
                     ${s.systemd ? '<button class="btn-s" onclick="restartDashboard()">🔄 Restart dashboard</button>' : ''}

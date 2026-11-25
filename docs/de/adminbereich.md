@@ -290,9 +290,6 @@ Die genaue Umsetzung steht in [Anleitungen → Umziehen](anleitungen.md#2-von-hb
 </p>
 
 - **Sessions**: alle Anmeldungen mit IP, Browser und Ablauf; jede lässt sich beenden.
-- **🔌 HobbyRadioPortal** (unter Sessions): Seit 1.11.0 gibt es **keine API-Tokens** mehr. Ein
-  [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) auf **demselben Rechner** verwaltet APRS und DAPRS direkt –
-  nichts anlegen, nichts kopieren. Was es darf und wann ein Aufruf als Portal gilt: [Sicherheit → HobbyRadioPortal](sicherheit.md#hobbyradioportal-auf-diesem-server-ohne-token).
 - **Log**: Anmeldungen, Fehlversuche, Benutzer- und Einstellungsänderungen, Neustarts, jeweils mit Zeit, Person und IP.
 - **System**: HTTPS mit Ablaufdatum des Zertifikats, Zugriff, Verbindung zum DMR-Server, FreeRadioID-IDs und gespeicherte Avatare. Dazu die Knöpfe **Restart dashboard** und **Restart DMR server**; sie erscheinen nur, wenn beides als systemd-Dienst läuft.
 - **⬆️ Updates** (im Tab System): installiert, Stand auf GitHub, zuletzt geprüft, letztes Update (erfolgreich oder zurückgenommen), Branch, Art des Neustarts und ob du installieren darfst. **↻ Jetzt prüfen** fragt sofort nach, **⬆️ Update jetzt installieren** installiert.
@@ -317,9 +314,9 @@ Das Fenster zeigt, was neu ist, woher das Update kommt und wie neu gestartet wir
 
 - **Passwort:** Fünf Fehlversuche sperren 15 Minuten, genau wie beim Login. Ein falsches Passwort lässt das Fenster offen, du kannst es noch einmal eingeben.
 - **Wer darf:** Standard ist **nur der Superadmin**. Einstellbar unter *Settings → ⬆️ Updates → Who may press “Update now”* (auch „alle Admins“ oder „niemand“).
-- **Neustart:** Ohne weitere Einrichtung beenden sich HBlink4 und das Dashboard selbst, und systemd startet sie wieder. Eine sudo-Regel ist **nicht nötig**, siehe [Betrieb → Neustart nach dem Update](betrieb.md#neustart-nach-dem-update-und-sudoers).
-- **Automatisch zurück (Rollback):** Vor dem Neustart merkt sich das Dashboard den alten Stand (`dashboard/data/update.pending`). Die neue Version prüft nach dem Start, ob ihre Weboberfläche antwortet. Antwortet sie nicht, beendet sie sich; nach **drei erfolglosen Starts** setzt `scripts/n8-update-guard.sh` (läuft als `ExecStartPre` im Dienst `hblink4-dash`) den Checkout auf den alten Commit zurück. Das Ergebnis steht unter *Letztes Update* („erfolgreich“ oder „zurückgenommen“) und in `dashboard/data/update.result`. Bestehende Installationen bekommen die `ExecStartPre`-Zeile mit `sudo ./scripts/install_services.sh`.
-- **Neue Python-Pakete:** Bringt das Update neue Pakete mit (`requirements*.txt` geändert), wird **nicht** neu gestartet; das Fenster zeigt den `pip`-Befehl für die Konsole.
+- **Wie:** Der Knopf legt nur den Auftrag an; installiert wird als root von `scripts/n8-admin.sh` (siehe [Betrieb → Update](betrieb.md#dienste-und-berechtigungen)) – Pakete, Rechte und sudo, Neustart beider Dienste.
+- **Automatisch zurück (Rollback):** Antwortet das Dashboard 90 Sekunden nach dem Neustart nicht, setzt `n8-admin.sh` auf den alten Commit zurück und startet erneut. Das Ergebnis steht unter *Letztes Update* („erfolgreich“ oder „zurückgenommen“), das Protokoll unter *🖥️ System → 📜 Update-Protokoll*.
+- **Neue Python-Pakete:** installiert der Helfer mit.
 
 Was Update now **nicht** tut, mit Absicht:
 - Es lädt nur vom Git-Remote `origin`, der **auf dem Server** eingerichtet ist; eine Adresse aus dem Browser wird nie benutzt. Das Repository in den Settings dient nur dem Hinweis.

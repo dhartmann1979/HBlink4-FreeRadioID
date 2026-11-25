@@ -42,7 +42,7 @@ from .talkgroups import Talkgroups
 from . import version as _version
 from . import siteicons as _siteicons
 from . import n8_security as _sec
-from . import n8_update_guard as _guard
+from .n8_admin import N8Admin as _N8Admin
 from . import backup as _backup
 from . import autobackup as _autobackup
 from .aprs.service import AprsService
@@ -1475,7 +1475,8 @@ async def api_admin_update(request: Request, force: bool = False):
     if cfg.get("enabled") is False and not force:
         return {"enabled": False, "available": False, "local": _version.local_version()}
     res = await _update_check(force)
-    res = {**res, "can_install": _may_install(user) and bool(res["local"].get("commit")),
+    ready = _n8().update_state()["ready"]
+    res = {**res, "can_install": _may_install(user) and bool(res["local"].get("commit")) and ready, "n8_ready": ready,
            "install_role": str(cfg.get("install_role") or "superadmin"),
            "systemd": bool(os.environ.get("INVOCATION_ID")),
            "sudo_restart": await asyncio.to_thread(_version.sudo_restart_allowed),
@@ -1486,7 +1487,7 @@ async def api_admin_update(request: Request, force: bool = False):
     except Exception:
         owner = ""
     return {"enabled": True, **res, "path": str(_version.REPO_ROOT), "owner": owner,
-            "result": _guard.last_result(state._data_dir)}
+            "result": _n8().update_state()["result"]}
 
 
 @app.post("/api/admin/update/install")
@@ -1507,39 +1508,62 @@ async def api_admin_update_install(request: Request, body: dict = Body(...)):
         raise _HTTPError(429, "An update is already running – please wait a moment.")
     async with _update_lock:
         _update_last_try = time.time()
-        cfg = _update_cfg()
-        try:
-            res = await asyncio.to_thread(_version.install, str(cfg.get("branch") or "main"),
-                                          str(body.get("expected") or ""))
-        except _version.UpdateError as e:
-            state.auth.audit("update_failed", user["username"], str(e)[:200], ip)
-            raise _HTTPError(409, str(e))
-    state.auth.audit("update", user["username"], f"{res['old'][:7]} → {res['new'][:7]}", ip)
-    logger.info(f"⬆️ Updated by {user['username']}: {res['old'][:7]} → {res['new'][:7]} ({len(res['files'])} files)")
-    restart = bool(body.get("restart", True)) and res["changed"] and not res["requirements_changed"]
-    if restart:
-        # N8 update guard: the new code confirms that its web interface answers; otherwise
-        # scripts/n8-update-guard.sh (ExecStartPre) goes back to the old commit after three starts
-        try:
-            _guard.mark_pending(state._data_dir, res["old"], res["new"], _ver_short(res["old"]), _ver_short(res["new"]))
-        except OSError as e:
-            logger.warning(f"update guard not armed: {e}")
-    how = "none"
-    if restart:
-        if await asyncio.to_thread(_version.sudo_restart_allowed):
-            how = "sudo"
-        elif os.environ.get("INVOCATION_ID"):
-            how = "service"
-        else:
-            how = "manual"
-    if how == "sudo":
-        asyncio.get_running_loop().call_later(1.0, _version.sudo_restart)
-    elif how == "service":
-        # Without sudo: HBlink4 and the dashboard end themselves, systemd (Restart=always) starts them again
-        res["dmr_restarted"] = send_hblink_command({"type": "restart"})
-        import signal as _signal
-        asyncio.get_running_loop().call_later(1.5, os.kill, os.getpid(), _signal.SIGTERM)
-    return {"ok": True, **res, "restart": how, "version": _version.local_version()}
+        # installiert wird als root über scripts/n8-admin.sh update --auto (update.request → hblink4-update.path):
+        # vorspulen, Pakete, Rechte und sudo, beide Dienste neu starten, Dashboard prüfen – sonst zurück auf den alten Stand
+        ok, msg = _n8().request_update()
+        if not ok:
+            state.auth.audit("update_failed", user["username"], msg[:200], ip)
+            raise _HTTPError(409, msg)
+    state.auth.audit("update", user["username"], "angefordert (n8-admin.sh)", ip)
+    logger.info(f"⬆️ Update angefordert von {user['username']} – n8-admin.sh übernimmt")
+    return {"ok": True, "requested": True, "changed": True, "restart": "n8admin", "message": msg, "version": _version.local_version()}
+
+
+# ---------------------------------------------------------------- Dienste, Berechtigungen & sudo, Update-Protokoll (scripts/n8-admin.sh)
+_n8_obj = None
+
+
+def _n8() -> "_N8Admin":
+    global _n8_obj
+    if _n8_obj is None or _n8_obj.state_dir != Path(state._data_dir):
+        _n8_obj = _N8Admin(state._data_dir)
+    return _n8_obj
+
+
+@app.get("/api/admin/services")
+async def admin_services(request: Request):
+    _require_admin(request)
+    return {"ready": _n8().ready, "units": await _n8().units()}
+
+
+@app.post("/api/admin/services/{unit}/{action}")
+async def admin_service_action(unit: str, action: str, request: Request):
+    actor = _require_admin(request)
+    ok, out = await _n8().unit_action(unit, action)
+    state.auth.audit("service", actor["username"], f"{action} {unit}: {'ok' if ok else out[:120]}", _client_ip(request))
+    if not ok:
+        raise _HTTPError(400, out or "failed")
+    return {"ok": True, "message": out, "units": await _n8().units()}
+
+
+@app.get("/api/admin/perms")
+async def admin_perms(request: Request):
+    _require_admin(request)
+    return await _n8().check_perms()
+
+
+@app.post("/api/admin/perms/fix")
+async def admin_perms_fix(request: Request):
+    actor = _require_admin(request)
+    ok, out = await _n8().fix_perms()
+    state.auth.audit("perms_fix", actor["username"], "ok" if ok else "errors remain", _client_ip(request))
+    return {"ok": ok, "message": out, "check": await _n8().check_perms()}
+
+
+@app.get("/api/admin/update-log")
+async def admin_update_log(request: Request):
+    _require_admin(request)
+    return _n8().update_state()
 
 
 @app.get("/api/admin/system")
@@ -3160,8 +3184,6 @@ def _ver_short(commit: str) -> str:
 async def _start_update_loop():
     global _auto_loop_task
     asyncio.create_task(_update_loop())
-    if _guard.pending(state._data_dir):
-        asyncio.create_task(_guard.startup_check(state._data_dir, _self_url() + "/api/version"))
     asyncio.create_task(_refresh_link_icons())
     _auto_loop_task = asyncio.create_task(_auto_service().loop())
 
@@ -3418,7 +3440,9 @@ _SELF = {"host": "127.0.0.1", "port": 8080}
 
 
 def _self_url() -> str:
-    return _guard.local_url(_SELF["host"], _SELF["port"]).rstrip("/")
+    h = (_SELF["host"] or "").strip("[]")
+    h = "127.0.0.1" if h in ("", "0.0.0.0", "::", "*") else h
+    return f"http://{'[' + h + ']' if ':' in h else h}:{int(_SELF['port'])}"
 
 
 async def _serve(host: str, port: int):

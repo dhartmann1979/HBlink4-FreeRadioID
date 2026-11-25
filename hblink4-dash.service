@@ -12,9 +12,6 @@ Type=simple
 User=cort
 Group=cort
 WorkingDirectory=/home/cort/hblink4
-# N8 update guard: after an update from the web interface, go back to the previous commit
-# if the dashboard does not come up three times in a row (relative to WorkingDirectory)
-ExecStartPre=-/bin/sh scripts/n8-update-guard.sh . dashboard/data
 ExecStart=/home/cort/hblink4/venv/bin/python /home/cort/hblink4/dashboard/server.py
 Restart=always
 RestartSec=10
@@ -24,12 +21,14 @@ TimeoutStopSec=20
 # Security hardening
 # NOTE: do not add PrivateTmp=true here. See the note in hblink4.service --
 # a private /tmp breaks the 'unix' event transport between the two services.
-NoNewPrivileges=true
+# The dashboard uses sudo for exactly the commands in /etc/sudoers.d/hblink4-n8admin (scripts/n8-admin.sh):
+# services, permission check and "Update now". Everything else stays forbidden.
+NoNewPrivileges=no
 
 # HTTPS (dashboard/config.json -> https): lets the dashboard listen on ports
 # 80 and 443 without running as root. Harmless when HTTPS is off.
 AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+# (no CapabilityBoundingSet: sudo needs to switch the user id – the sudo rules stay narrow)
 
 # Logging
 StandardOutput=journal

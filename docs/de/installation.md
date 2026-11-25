@@ -104,8 +104,7 @@ Optionen per Umgebungsvariable:
 
 ### Ohne Rückfragen (`HB4_ANSWERS`)
 
-So richtet z. B. der Web-Installer des [HobbyRadioPortals](https://github.com/dhartmann1979/HobbyRadioPortal) (ab 0.11.0,
-*DMR & APRS → ✨ HBlink4 neu installieren*) einen DMR-Server ein. Alle Schlüssel sind optional – was fehlt, nimmt die Vorgabe
+Für Skripte und automatische Installationen. Alle Schlüssel sind optional – was fehlt, nimmt die Vorgabe
 (bzw. den aktuellen Wert); nur `admin_password` braucht eine Neuinstallation:
 
 ```bash

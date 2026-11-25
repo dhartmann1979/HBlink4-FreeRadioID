@@ -48,28 +48,6 @@ Backup, Wiederherstellung und AutoBackup ([Backup](backup.md), [AutoBackup](auto
 
 Sitzungs-Cookie `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`; jede schreibende Anfrage braucht den Header `X-Dashboard` (CSRF-Schutz); fünf Fehlversuche sperren 15 Minuten. IP-Adressen sehen nur Admins.
 
-## HobbyRadioPortal auf diesem Server (ohne Token)
-
-Das [HobbyRadioPortal](https://github.com/dhartmann1979/HobbyRadioPortal) verwaltet die APRS- und DAPRS-Einstellungen dieses
-Dashboards. Seit 1.11.0 gibt es dafür **keine API-Tokens** mehr (die Tabelle `api_tokens` wird beim Start gelöscht). Als Portal gilt
-nur ein **direkter Aufruf auf diesem Rechner**:
-
-- Absender **und** `Host` sind Loopback (`127.0.0.1`, `::1`, `localhost`), Kopfzeile `X-HobbyRadioPortal: 1`,
-- **keine** Proxy-Kopfzeile (`X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `X-Forwarded-Host/-Proto`, `Via`, `CF-Connecting-IP`,
-  `True-Client-IP`, `X-Client-IP`). Anfragen über nginx/Caddy (die auch von 127.0.0.1 kommen) und von anderen Rechnern sind nie
-  „das Portal“ – **ein eigener Reverse-Proxy muss `X-Forwarded-For` setzen** (siehe unten, die Vorlage tut das).
-
-Was das Portal darf:
-
-- Rolle **Admin**, nie Superadmin; **nur** alle öffentlichen `/api/`-Daten, `/api/admin/settings` (lesen, ändern, zurücksetzen),
-  `/api/admin/aprs…` (Status, Clients trennen, Neustart, Objekte, Passcode) und `/api/admin/audit`.
-- **Nie**: Benutzer, Sitzungen, Backups, Anmeldung/Passwort, Updates, Neustarts – und die Einstellungen *Dashboard access*,
-  *HTTPS & web* und *Updates* sind gesperrt.
-- Der CSRF-Schutz (`X-Dashboard: 1`) gilt auch für das Portal.
-- Jede Änderung steht im Protokoll als `portal (<Portal-Benutzer>)`.
-- Jedes Programm auf diesem Rechner könnte sich als Portal ausgeben. Wer das nicht will: `HB4_PORTAL_LOCAL=0` in der Umgebung des
-  Dashboard-Dienstes (dann zeigt das Portal nur Live-Daten).
-
 ## Reverse-Proxy davor (empfohlen)
 
 Das Dashboard kann HTTPS mit Let's Encrypt selbst. Läuft auf dem Server ohnehin ein Webserver, ist ein **Reverse-Proxy** davor die sauberste Lösung: Zertifikate, Header und Protokolle an einer Stelle. Das Dashboard lauscht dann nur lokal (Adminbereich → Settings → HTTPS & web: HTTPS **aus**, Listen address `127.0.0.1`).
@@ -123,7 +101,7 @@ Gemeinsame Bausteine für **HBlink4-FreeRadioID, adn-frn-server, N8-HotSpot und 
 | `dashboard/static/n8-kit.js` | Sprache DE/EN, Übersetzung, Sprachumschalter, Update-Hinweis, Updates-Kachel, Update-Fortschritt |
 | `dashboard/static/n8-kit.css` | Aussehen dieser Bausteine, auf Basis der N8-Theme-2-Farben |
 | `dashboard/n8_security.py` | Sicherheits-Header, API-Doku aus, kein `server`-Header |
-| `dashboard/n8_update_guard.py` + `scripts/n8-update-guard.sh` | Prüfung nach dem Update und automatisches Zurücksetzen |
+| `scripts/n8-admin.sh` + `dashboard/n8_admin.py` | Update mit Prüfung und Zurücksetzen, Berechtigungsprüfer mit Korrektur, sudo-Freigaben, Dienste |
 | `dashboard/static/i18n-dashboard.js` | die deutschen Texte dieses Dashboards (eigene Datei je Projekt) |
 
 ### Sprache DE | EN
@@ -144,7 +122,7 @@ Gemeinsame Bausteine für **HBlink4-FreeRadioID, adn-frn-server, N8-HotSpot und 
 | Hinweis | unter der Statusleiste, nur für Admins: *Update verfügbar: alt → neu* · Was ist neu? · Jetzt aktualisieren · Details · Später (ein Tag) |
 | Installieren | Fenster mit Neuerungen und (hier) Passwortabfrage, dann drei Schritte mit Fortschritt; die Seite lädt danach neu |
 | Prüfung danach | die neue Version ruft ihre eigene Weboberfläche auf |
-| Rollback | antwortet sie nicht, startet der Dienst neu; nach drei Starts ohne Antwort setzt `n8-update-guard.sh` auf den alten Stand zurück |
+| Rollback | antwortet das Dashboard 90 s nach dem Update nicht, setzt `n8-admin.sh` auf den alten Stand zurück und startet erneut |
 | Ergebnis | *Letztes Update* in Admin → System: erfolgreich oder zurückgenommen, mit Zeit |
 
 ---

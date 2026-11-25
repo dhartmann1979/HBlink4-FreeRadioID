@@ -110,16 +110,23 @@ class TestInstallApi(unittest.TestCase):
 
     def setUp(self):
         self.calls = []
-        self._install = v.install
-        v.install = lambda branch, expected: (self.calls.append((branch, expected)) or
-                                              {"old": "a" * 40, "new": expected, "files": ["x.py"],
-                                               "changed": True, "requirements_changed": False})
+        test = self
+
+        class FakeN8:        # „Update jetzt“ legt nur den Auftrag für scripts/n8-admin.sh an
+            def request_update(self):
+                test.calls.append("request")
+                return True, "Update angefordert"
+
+            def update_state(self):
+                return {"ready": True, "result": None}
+        self._n8 = self.server._n8
+        self.server._n8 = lambda: FakeN8()
         self.server._update_last_try = 0.0
         self.server.dashboard_config["update"] = {"install_role": "superadmin"}
         self.client.cookies.clear()
 
     def tearDown(self):
-        v.install = self._install
+        self.server._n8 = self._n8
         self.client.post("/api/auth/logout", headers={"X-Dashboard": "1"})
         self.client.cookies.clear()
 
@@ -135,10 +142,10 @@ class TestInstallApi(unittest.TestCase):
         self.assertEqual(self.post({"password": "SuperSecret1", "expected": "b" * 40}, header=False).status_code, 403)
         self.assertEqual(self.post({"password": "wrong", "expected": "b" * 40}).status_code, 403)
         self.assertEqual(self.calls, [])
-        r = self.post({"password": "SuperSecret1", "expected": "b" * 40, "restart": False})
+        r = self.post({"password": "SuperSecret1", "expected": "b" * 40})
         self.assertEqual(r.status_code, 200, r.text)
-        self.assertEqual(self.calls, [("main", "b" * 40)])
-        self.assertEqual(r.json()["restart"], "none")
+        self.assertEqual(self.calls, ["request"])
+        self.assertTrue(r.json()["requested"])
 
     def test_admin_only_when_allowed(self):
         self.login("helper", "HelperPass1")
