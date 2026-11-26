@@ -3147,6 +3147,9 @@ async def websocket_endpoint(websocket: WebSocket):
 # page (also at / for the APRS domains), its API, live updates and the admin API.
 _APRS_HTML = Path(__file__).parent / "static" / "aprs.html"
 _OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+# highest zoom each tile server delivers – beyond it the map enlarges the last tiles instead of showing nothing (dark)
+_APRS_NATIVE_ZOOM = {"osm": 19, "topo": 17}
+_APRS_MAX_ZOOM = 20
 _APRS_TILES = {
     "osm": ("https://tile.openstreetmap.org/{z}/{x}/{y}.png", _OSM_ATTR),
     "topo": ("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
@@ -3241,8 +3244,10 @@ async def aprs_config(request: Request):
     if style not in ("auto", "dark", "osm", "topo", "custom"):
         style = "auto"
     url, attribution = _APRS_TILES["topo" if style == "topo" else "osm"]
+    native = _APRS_NATIVE_ZOOM["topo" if style == "topo" else "osm"]
     if style == "custom" and c("aprs.map.tile_url", ""):
         url, attribution = str(c("aprs.map.tile_url")), "Map tiles: own tile server"
+        native = int(c("aprs.map.tile_max_zoom", 18) or 18)
     https_cfg = dashboard_config.get("https") or {}
     dash_url = (f"https://{https_cfg.get('domain')}/" if https_cfg.get("enabled") and https_cfg.get("domain")
                 else "/dashboard" if _request_host(request) in _aprs_domains() else "/")
@@ -3258,6 +3263,7 @@ async def aprs_config(request: Request):
         "logo_radius": dashboard_config.get("logo_radius", 0),
         "favicon": dashboard_config.get("favicon") or "",
         "map": {"center": [lat, lon], "zoom": int(c("aprs.map.zoom", 6) or 6), "tiles": url,
+                "native_zoom": native, "max_zoom": max(native, _APRS_MAX_ZOOM),
                 "attribution": attribution, "dark": style if style in ("auto", "dark") else False,
                 "tracks": bool(c("aprs.map.tracks", True)), "show_packets": bool(c("aprs.map.show_packets", True)),
                 "max_age_hours": int(c("aprs.map.max_age_hours", 24) or 24), "sources": c("aprs.map.sources", "all")},

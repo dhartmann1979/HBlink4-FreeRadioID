@@ -67,7 +67,7 @@ Fertig: Die Karte ist unter `https://aprs.example.org/`, `https://map.example.or
 - **Detailfenster:** letzte Meldung, Position mit **QTH-Locator**, Geschwindigkeit, Richtung, Höhe, bei DMR-Stationen **DMR-ID, Talkgroup, über welchen Repeater/Hotspot** und wie die Position kam (im Sprachruf, Datenruf NMEA oder LRRP), Avatar von FreeRadioID, Kommentar, Wetterwerte, die letzten Rohpakete, **〰️ Track** (Spur) und ein Link zu aprs.fi.
 - **📜 Live packets:** die Rohpakete in Echtzeit (abschaltbar).
 - **🧭** zeigt alle Stationen; Beschriftungen erscheinen ab Zoomstufe 8.
-- **Kartenstil:** automatisch passend zum Farbprofil (dunkle OpenStreetMap im N8-Design, helle bei ☀️ Daylight), OpenStreetMap, OpenTopoMap oder ein eigener Kachelserver.
+- **Kartenstil:** automatisch passend zum Farbprofil (dunkle OpenStreetMap im N8-Design, helle bei ☀️ Daylight), OpenStreetMap, OpenTopoMap oder ein eigener Kachelserver. Heranzoomen geht bis Stufe 20: über der letzten Stufe des Kachelservers (OpenStreetMap 19, OpenTopoMap 17, eigener Server einstellbar, Standard 18) werden die Kacheln vergrößert, statt zu fehlen.
 
 <p align="center">
   <img src="../images/aprs-packets.jpg" alt="Live-Pakete" width="49%">
@@ -263,6 +263,7 @@ Alle Werte liegen in SQLite (`dashboard/data/dashboard.db`).
 | Domain zeigt das Dashboard statt der Karte | Domain nicht eingetragen oder Dashboard noch nicht neu gestartet | **📡 APRS → Domains**, dann Dashboard neu starten |
 | Domain ohne HTTPS / Zertifikatswarnung | DNS zeigt nicht auf den Server (Log: `… is left out of the certificate`) oder HTTPS ist aus (Netz, Ports & Domains) | DNS-Eintrag korrigieren, Dashboard neu starten; Übersicht zeigt den Status |
 | Keine Kartenkacheln | der Browser erreicht den Kachelserver nicht | anderen Kartenstil oder eigenen Kachelserver wählen |
+| Karte wird beim nahen Heranzoomen dunkel | bis 1.16.0: Zoom über die letzte Stufe des Kachelservers (OpenTopoMap 17) | auf 1.16.1 aktualisieren; beim eigenen Kachelserver *Höchste Zoomstufe* passend setzen |
 
 ## Technik
 

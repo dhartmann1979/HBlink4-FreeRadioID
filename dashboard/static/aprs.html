@@ -364,12 +364,15 @@ function matchesFilter(s) {
 // ----------------------------------------------------------------- map
 function initMap() {
     const c = S.cfg.map;
-    const map = L.map('map', { zoomControl: false, worldCopyJump: true, preferCanvas: false })
+    // the tile servers stop at different zoom levels (OpenTopoMap 17, OpenStreetMap 19): beyond that the last tiles are
+    // enlarged (maxNativeZoom) instead of leaving the map empty and dark
+    const nativeZoom = c.native_zoom || 18, maxZoom = c.max_zoom || 20;
+    const map = L.map('map', { zoomControl: false, worldCopyJump: true, preferCanvas: false, maxZoom })
         .setView(c.center, c.zoom);
     L.control.zoom({ position: 'topright' }).addTo(map);
     const dark = c.dark === 'dark' || (c.dark === 'auto' && document.documentElement.dataset.themeMode !== 'light');
     document.getElementById('map').classList.toggle('tiles-dark', dark);
-    L.tileLayer(c.tiles, { maxZoom: 19, subdomains: 'abc', crossOrigin: true,
+    L.tileLayer(c.tiles, { maxZoom, maxNativeZoom: nativeZoom, subdomains: 'abc', crossOrigin: true,
         referrerPolicy: 'strict-origin-when-cross-origin',
         attribution: c.attribution }).addTo(map);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');

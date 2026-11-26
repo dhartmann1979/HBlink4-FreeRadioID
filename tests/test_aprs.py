@@ -491,6 +491,8 @@ class TestMapApi(unittest.TestCase):
         self.assertEqual(cfg["site"]["title"], "Auf der NachtSchicht")
         self.assertEqual(cfg["site"]["logo"], "/static/adn-icon.svg")
         self.assertIn("openstreetmap", cfg["map"]["tiles"])
+        # beyond the last zoom of the tile server the tiles are enlarged instead of missing (dark map)
+        self.assertEqual((cfg["map"]["native_zoom"], cfg["map"]["max_zoom"]), (19, 20))
         self.assertEqual(self.client.get("/api/aprs/config").json()["site"]["title"], "DMR Die N8schicht")
         m = self.client.get("/api/aprs/config", headers={"host": "map.example.org"}).json()["site"]
         self.assertEqual((m["title"], m["subtitle"]), ("DMR Die N8schicht", "APRS map · map.example.org"))
