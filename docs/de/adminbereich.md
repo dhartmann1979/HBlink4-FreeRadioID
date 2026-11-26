@@ -39,7 +39,7 @@ Im Adminbereich stellst du **Dashboard und DMR-Server** ein, ohne SSH und ohne C
 
 <p align="center"><img src="../images/admin-keepalive.png" alt="Adminbereich mit Baum-Menü" width="95%"></p>
 
-Seit **1.14.1** ist der Adminbereich kein schwebendes Fenster mehr, sondern – wie in N8 Crosslink und allen N8-Systemen – eine **Seite unter der Kopfzeile über die ganze Browser-Breite**; **⚙️ Admin** in der Menüleiste ist dabei hervorgehoben, ein Klick auf einen anderen Menüpunkt (oder Esc) verlässt ihn. Seit **1.13.0** steht links ein **Baum-Menü** – dasselbe wie im HobbyRadioPortal, ADN-FRN-Server, N8 Hotspot
+Seit **1.14.1** ist der Adminbereich kein schwebendes Fenster mehr, sondern – wie in N8 Crosslink und allen N8-Systemen – eine **Seite unter der Kopfzeile über die ganze Browser-Breite**; **⚙️ Admin** in der Menüleiste ist dabei hervorgehoben, ein Klick auf einen anderen Menüpunkt (oder Esc) verlässt ihn. Seit **1.13.0** steht links ein **Baum-Menü** – dasselbe wie im ADN-FRN-Server, N8 Hotspot
 und N8 Crosslink, mit denselben Gruppen in derselben Reihenfolge:
 
 | Gruppe | Einträge |
