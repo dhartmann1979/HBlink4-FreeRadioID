@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/static/n8-kit.css">
     <script src="/static/n8-kit.js"></script>
     <script src="/static/i18n-dashboard.js"></script>
+    <script src="/static/n8-i18n-intl.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -2556,7 +2557,7 @@
             </nav>
             <div class="status-badges hdr-right">
                 <div class="links-menu" id="linksMenu" hidden><button type="button" class="links-btn" onclick="toggleLinks(event)" title="Links"><span class="links-label">🔗 Links</span> ▾</button><div class="links-pop"></div></div>
-                <a class="network-info-btn" id="networkInfoBtn" style="display: none;" target="_blank">🌐 Network Info</a>
+                <a class="network-info-btn" id="networkInfoBtn" style="display: none;" target="_blank"><span aria-hidden="true">🌐</span><span class="links-label"> Network Info</span></a>
                 <div id="userArea"></div>
             </div>
         </header>
@@ -2954,7 +2955,9 @@
                 // Configure network info button
                 const networkInfoBtn = document.getElementById('networkInfoBtn');
                 if (config.network_info && config.network_info.enabled && config.network_info.url) {
-                    networkInfoBtn.textContent = config.network_info.button_text || '🌐 Network Info';
+                    // icon and text apart: on phones only the icon is shown (N8 Kit header)
+                    const nt = String(config.network_info.button_text || '🌐 Network Info').match(/^(\P{L}*)([\s\S]*)$/u);
+                    networkInfoBtn.innerHTML = `<span aria-hidden="true">${escapeHtml(nt[1].trim() || '🌐')}</span><span class="links-label"> ${escapeHtml(nt[2])}</span>`;
                     networkInfoBtn.href = config.network_info.url;
                     networkInfoBtn.style.display = 'inline-block';
                 } else {
@@ -3151,56 +3154,33 @@
             if (!el) return;
             const adminTab = document.getElementById('mainTabAdmin');
             if (adminTab) adminTab.hidden = !isAdmin();
-            if (!state.me) {
-                el.innerHTML = '<button class="hdr-btn login" onclick="openLogin()">🔐 Login</button>';
-                return;
-            }
-            // logged in: who am I (click = change password) and a direct log-out button – no drop-down
+            // N8 Kit 1.6: 🔐 Login – or avatar + name ▾ (change password, admin area, log out), the same in every N8 system
             const u = state.me;
-            el.innerHTML = `
-                <div class="user-chip">
-                    <button class="hdr-btn user" ${u.from_config ? 'disabled' : 'onclick="openPasswordDialog()"'}
-                            title="${escapeHtml(u.display_name || u.username)} · ${escapeHtml(ROLE_LABEL[u.role] || u.role)}${u.from_config ? '' : ' – change password'}">
-                        ${avatarHtml(u.dmr_id || 0, u.display_name || u.username, 22, u.dmr_id ? undefined : '')}
-                        <span class="u-name">${escapeHtml(u.display_name || u.username)}</span>
-                    </button>
-                    <button class="hdr-btn logout" onclick="logout()" title="Log out" aria-label="Log out">⏻</button>
-                </div>`;
+            N8Kit.userMenu(el, u && { name: u.display_name || u.username, role: u.role, sub: u.dmr_id ? 'DMR-ID ' + u.dmr_id : (u.display_name ? u.username : '') }, {
+                btnClass: u ? 'hdr-btn user' : 'hdr-btn login', loginLabel: 'Log in', logoutLabel: 'Log out', roleLabel: u && (ROLE_LABEL[u.role] || u.role),
+                avatar: u ? avatarHtml(u.dmr_id || 0, u.display_name || u.username, 23, u.dmr_id ? undefined : '') : '',
+                onLogin: () => openLogin(), onLogout: logout,
+                items: u ? [
+                    { icon: '🔑', label: 'Change password', onClick: () => openPasswordDialog(), disabled: !!u.from_config },
+                    { icon: '⚙️', label: 'Admin area', onClick: () => openAdmin(), hidden: !isAdmin(), sep: true },
+                ] : [],
+            });
         }
         document.addEventListener('click', (e) => {
             document.querySelectorAll('.user-menu.open').forEach(m => { if (!m.contains(e.target)) m.classList.remove('open'); });
         });
 
         function openLogin(gate = false) {
-            const m = openModal(`
-                <form class="login-card" onsubmit="event.preventDefault(); doLogin(this)">
-                    <img src="${escapeHtml(document.querySelector('.logo').src)}" class="login-logo" alt="">
-                    <h2>${escapeHtml(document.getElementById('dashboardTitle').textContent)}</h2>
-                    <p class="muted">${gate ? 'Please log in to view the dashboard.' : 'Log in to see IP addresses and the admin area.'}</p>
-                    <input name="username" placeholder="Username" autocomplete="username" required autofocus>
-                    <input name="password" type="password" placeholder="Password" autocomplete="current-password" required>
-                    <label class="check"><input type="checkbox" name="remember"> Stay logged in</label>
-                    <div class="form-error" hidden></div>
-                    <button class="btn-primary" type="submit">Log in</button>
-                </form>`, 'small', !gate);
-            m.querySelector('input[name=username]').focus();
-        }
-
-        async function doLogin(form) {
-            const err = form.querySelector('.form-error');
-            err.hidden = true;
-            try {
-                const j = await api('POST', '/api/auth/login', {
-                    username: form.username.value, password: form.password.value, remember: form.remember.checked });
-                state.me = j.user;
-                form.closest('.modal-overlay').remove();
-                renderUserArea();
-                reconnectWS();
-                toast(`Welcome, ${j.user.display_name || j.user.username}`, 'ok');
-            } catch (e) {
-                err.textContent = e.message;
-                err.hidden = false;
-            }
+            N8Kit.login.open({
+                logo: document.querySelector('.logo').src, title: document.getElementById('dashboardTitle').textContent,
+                subtitle: gate ? 'Please log in to view the dashboard.' : 'Log in to see IP addresses and the admin area.',
+                remember: 'Stay logged in', closable: !gate,
+                submit: async v => {
+                    const j = await api('POST', '/api/auth/login', { username: v.username, password: v.password, remember: v.remember });
+                    state.me = j.user;
+                    setTimeout(() => { renderUserArea(); reconnectWS(); toast(`Welcome, ${j.user.display_name || j.user.username}`, 'ok'); }, 0);
+                },
+            });
         }
 
         async function logout() {
@@ -3933,7 +3913,7 @@
         function aprsChip(ok, warn, text) {
             return `<span class="aprs-st ${ok ? 'ok' : warn ? 'warn' : 'off'}">${text}</span>`;
         }
-        const aprsNum = n => Number(n || 0).toLocaleString('de-DE');
+        const aprsNum = n => Number(n || 0).toLocaleString(N8Kit.locale());
         function aprsOverviewHtml(st) {
             const s = st.stats || {}, c = st.counts || {}, https = st.https || {}, net = st.network || 'Downlink';
             const kpi = (icon, label, value, sub) => `<div class="ap-kpi"><div class="k">${icon} ${label}</div><div class="v">${value}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
@@ -4546,7 +4526,7 @@
                 return `<button type="button" class="obe-item ${i === obe.idx ? 'active' : ''}" onclick="obe.idx=${i}; obeRender()">
                     <span class="obe-dot ${t.enabled === false ? 'off' : 'on'}"></span>
                     <span class="obe-name">${escapeHtml(t.name || 'unnamed')}</span>
-                    <span class="obe-meta">${obeProto(t) === 'freedmr' ? 'FreeDMR v5' : 'Classic'} · ${all ? 'all TGs' : n.toLocaleString('de-DE') + ' TGs'}</span></button>`;
+                    <span class="obe-meta">${obeProto(t) === 'freedmr' ? 'FreeDMR v5' : 'Classic'} · ${all ? 'all TGs' : n.toLocaleString(N8Kit.locale()) + ' TGs'}</span></button>`;
             }).join('');
             root.innerHTML = `
                 <div class="obe-layout">
@@ -4735,7 +4715,7 @@
             const el = document.getElementById('obeTgList'); if (!el) return;
             const t = obeCur(), rows = obeTgRows(), sel = t.talkgroup_slots || {};
             const n = Object.keys(sel).length, total = Object.keys(obe.names).filter(k => Number(k) >= 80).length;
-            document.getElementById('obeTgCount').innerHTML = `<b>${n.toLocaleString('de-DE')}</b> of ${total.toLocaleString('de-DE')} known talkgroups selected`;
+            document.getElementById('obeTgCount').innerHTML = `<b>${n.toLocaleString(N8Kit.locale())}</b> of ${total.toLocaleString(N8Kit.locale())} known talkgroups selected`;
             el.innerHTML = rows.length ? rows.slice(0, obe.limit).map(r => `
                 <label class="obe-tgrow ${r.ts ? 'on' : ''}" data-tg="${r.tg}">
                     <input type="checkbox" ${r.ts ? 'checked' : ''} onchange="obeTgToggle('${r.tg}', this.checked, this)">
@@ -4745,7 +4725,7 @@
                 </label>`).join('') : '<div class="tgs-empty">No talkgroup found.</div>';
             const more = document.getElementById('obeTgMore');
             more.hidden = rows.length <= obe.limit;
-            more.querySelector('button').textContent = `Show all ${rows.length.toLocaleString('de-DE')}`;
+            more.querySelector('button').textContent = `Show all ${rows.length.toLocaleString(N8Kit.locale())}`;
         }
         function obeTgToggle(tg, on, box) {
             const t = obeCur(); t.talkgroup_slots = t.talkgroup_slots || {};
@@ -4753,7 +4733,7 @@
             const row = box.closest('.obe-tgrow'); row.classList.toggle('on', on);
             const s = row.querySelector('select'); s.disabled = !on; if (on) s.value = String(obe.newTs);
             const n = Object.keys(t.talkgroup_slots).length;
-            document.getElementById('obeTgCount').querySelector('b').textContent = n.toLocaleString('de-DE');
+            document.getElementById('obeTgCount').querySelector('b').textContent = n.toLocaleString(N8Kit.locale());
             obeApplyVisibility(); obeDirty();
         }
         function obeTgTs(tg, ts) { obeCur().talkgroup_slots[tg] = String(ts); obeApplyVisibility(); obeDirty(); }
@@ -5068,8 +5048,8 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
             const d = new Date(ts * 1000);
             return d.toDateString() === new Date().toDateString()
-                ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-                : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                ? d.toLocaleTimeString(N8Kit.locale(), { hour: '2-digit', minute: '2-digit' })
+                : d.toLocaleString(N8Kit.locale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
         }
 
         async function showIdDetails(radioId) {
@@ -5763,7 +5743,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (countElement) countElement.textContent = upCount > 0 ? `${upCount}` : '';
 
             const streams = state.streams || [];
-            const n = v => Number(v || 0).toLocaleString('de-DE');
+            const n = v => Number(v || 0).toLocaleString(N8Kit.locale());
 
             container.innerHTML = list.map(o => {
                 const lk = obpLink(o), up = lk.up;
@@ -5800,7 +5780,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
         }
 
         function obpTsSplit(ts1, ts2) {
-            const n = v => Number(v || 0).toLocaleString('de-DE');
+            const n = v => Number(v || 0).toLocaleString(N8Kit.locale());
             return !ts1 ? 'all on TS2' : !ts2 ? 'all on TS1' : `TS1 ${n(ts1)} · TS2 ${n(ts2)}`;
         }
 
@@ -5847,7 +5827,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const today = Object.values(state.obpToday || {});
             const rx = today.reduce((a, t) => a + (t.rx || 0), 0), tx = today.reduce((a, t) => a + (t.tx || 0), 0);
             const sub = document.getElementById('statObpSub');
-            if (sub) sub.textContent = state.obpToday ? `⬇ ${rx.toLocaleString('de-DE')} · ⬆ ${tx.toLocaleString('de-DE')}` : '';
+            if (sub) sub.textContent = state.obpToday ? `⬇ ${rx.toLocaleString(N8Kit.locale())} · ⬆ ${tx.toLocaleString(N8Kit.locale())}` : '';
         }
 
         function updateOutbounds(outbounds) {
@@ -6790,21 +6770,21 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (tgd.filter === 'own') rows = rows.filter(r => r.own);
             if (q) rows = rows.filter(r => r.tg.startsWith(q) || r.name.toLowerCase().includes(q));
             rows.sort((x, y) => tgd.filter === 'active' ? y.a.duration - x.a.duration : Number(x.tg) - Number(y.tg));
-            document.getElementById('tgDirCount').textContent = rows.length.toLocaleString('de-DE');
+            document.getElementById('tgDirCount').textContent = rows.length.toLocaleString(N8Kit.locale());
             const shown = rows.slice(0, tgd.limit);
-            const dt = ts => new Date(ts * 1000).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const dt = ts => new Date(ts * 1000).toLocaleString(N8Kit.locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
             document.getElementById('tgDirBody').innerHTML = shown.length ? shown.map(r => `<tr><td><b>${escapeHtml(r.tg)}</b></td>
                 <td style="white-space:normal">${escapeHtml(r.name) || '<span style="color:var(--text-dim)">–</span>'}${r.own ? '<span class="own-tag">own</span>' : ''}</td>
-                <td class="num">${r.a ? r.a.calls.toLocaleString('de-DE') : '<span style="color:var(--text-dim)">–</span>'}</td>
+                <td class="num">${r.a ? r.a.calls.toLocaleString(N8Kit.locale()) : '<span style="color:var(--text-dim)">–</span>'}</td>
                 <td class="num hide-sm">${r.a ? tgsFmtDur(r.a.duration, true) : ''}</td>
                 <td class="hide-sm">${r.a ? dt(r.a.last) : ''}</td></tr>`).join('')
                 : '<tr><td colspan="5" class="tgs-empty">No talkgroup found.</td></tr>';
             const more = document.getElementById('tgDirMore');
             more.style.display = rows.length > tgd.limit ? '' : 'none';
-            more.querySelector('button').textContent = `Show all ${rows.length.toLocaleString('de-DE')}`;
+            more.querySelector('button').textContent = `Show all ${rows.length.toLocaleString(N8Kit.locale())}`;
             const L = d.list || {};
             document.getElementById('tgDirSource').innerHTML = L.enabled
-                ? `List of the N8schicht: ${(L.count || 0).toLocaleString('de-DE')} names${L.updated ? ', updated ' + dt(L.updated) : ''} · <a href="https://github.com/dhartmann1979/n8schicht/blob/main/talkgroup_ids.json" target="_blank" rel="noopener" style="color:var(--accent)">talkgroup_ids.json</a>`
+                ? `List of the N8schicht: ${(L.count || 0).toLocaleString(N8Kit.locale())} names${L.updated ? ', updated ' + dt(L.updated) : ''} · <a href="https://github.com/dhartmann1979/n8schicht/blob/main/talkgroup_ids.json" target="_blank" rel="noopener" style="color:var(--accent)">talkgroup_ids.json</a>`
                 : 'Talkgroup list switched off (admin area → Settings → Talkgroups &amp; statistics)';
         }
         (() => {
@@ -6889,8 +6869,8 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const live = obpList().find(o => o.connection_name === t.connection_name) || {};
             const o = { ...t, ...live };
             const lk = obpLink(o), up = lk.up;
-            const n = v => Number(v || 0).toLocaleString('de-DE');
-            const dt = ts => ts ? new Date(ts * 1000).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
+            const n = v => Number(v || 0).toLocaleString(N8Kit.locale());
+            const dt = ts => ts ? new Date(ts * 1000).toLocaleString(N8Kit.locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
             const ago = ts => { if (!ts) return '–'; const s = Date.now() / 1000 - ts; return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : dt(ts); };
             const tgCount = t.talkgroup_count ?? (t.talkgroups || []).length;
 
@@ -6939,7 +6919,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
                     <div class="tgs-table-wrap" style="margin-top:6px">
                         <table class="tgs-table"><thead><tr><th>Time</th><th></th><th>Station</th><th>Talkgroup</th><th class="hide-sm">TS</th><th class="num">Duration</th></tr></thead>
                         <tbody>${S.recent.length ? S.recent.map(r => `<tr>
-                            <td>${new Date(r.ts * 1000).toLocaleString('de-DE', obp.range === 'today' || obp.range === '24h' ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>${new Date(r.ts * 1000).toLocaleString(N8Kit.locale(), obp.range === 'today' || obp.range === '24h' ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
                             <td><span class="obp-dir ${r.dir}">${r.dir === 'rx' ? '⬇ RX' : '⬆ TX'}</span></td>
                             <td>${idLink(r.src_id, `<b>${escapeHtml(r.callsign || String(r.src_id || ''))}</b> <span class="hide-sm" style="color:var(--text-dim)">${r.callsign ? escapeHtml(r.src_id || '') : ''}</span>`)}</td>
                             <td class="obp-tgcell"><b>${r.tg}</b> <span>${escapeHtml(r.name || '')}</span></td>
@@ -6990,14 +6970,14 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (obp.tgF === '1' || obp.tgF === '2') rows = rows.filter(r => String(r[1]) === obp.tgF);
             if (obp.tgF === 'active') rows = rows.filter(r => hot.has(r[0]));
             if (q) rows = rows.filter(r => String(r[0]).startsWith(q) || (r[2] || '').toLowerCase().includes(q));
-            document.getElementById('obpTgCount').textContent = rows.length.toLocaleString('de-DE');
+            document.getElementById('obpTgCount').textContent = rows.length.toLocaleString(N8Kit.locale());
             const el = document.getElementById('obpTgList');
             el.innerHTML = rows.length ? rows.slice(0, obp.tgLimit).map(([tg, ts, name]) =>
                 `<div class="obp-tg${hot.has(tg) ? ' hot' : ''}" title="${escapeHtml(tg + (name ? ' – ' + name : ''))}"><b>${tg}</b><span class="n">${escapeHtml(name || '')}</span><span class="ts">TS${ts}</span></div>`).join('')
                 : '<div class="tgs-empty" style="grid-column:1/-1">No talkgroup found.</div>';
             const more = document.getElementById('obpTgMore');
             more.style.display = rows.length > obp.tgLimit ? '' : 'none';
-            more.querySelector('button').textContent = `Show all ${rows.length.toLocaleString('de-DE')}`;
+            more.querySelector('button').textContent = `Show all ${rows.length.toLocaleString(N8Kit.locale())}`;
         }
 
         // Horizontal bars, RX and TX side by side in one bar (2px gap)
@@ -7007,7 +6987,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const val = r => r['rx' + k] + r['tx' + k];
             const rows = [...S.top].sort((a, b) => val(b) - val(a)).slice(0, 10).filter(r => val(r) > 0);
             if (!rows.length) return tgsEmpty(el);
-            const fmt = v => m === 'calls' ? Math.round(v).toLocaleString('de-DE') : tgsFmtDur(v, true);
+            const fmt = v => m === 'calls' ? Math.round(v).toLocaleString(N8Kit.locale()) : tgsFmtDur(v, true);
             const W = Math.max(280, el.clientWidth || 420), rowH = 30, barH = 14;
             const labelW = Math.min(150, Math.max(92, W * 0.32)), valW = 64, plotW = W - labelW - valW;
             const max = Math.max(...rows.map(val)) || 1, H = rows.length * rowH;
@@ -7041,7 +7021,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const el = document.getElementById('obpTime');
             const m = obp.metric, rx = S.series.rx[m], tx = S.series.tx[m], n = S.buckets.length;
             if (!rx.some(v => v) && !tx.some(v => v)) return tgsEmpty(el);
-            const fmt = v => m === 'calls' ? Math.round(v).toLocaleString('de-DE') : tgsFmtDur(v, true);
+            const fmt = v => m === 'calls' ? Math.round(v).toLocaleString(N8Kit.locale()) : tgsFmtDur(v, true);
             const yMax = tgsNiceMax(Math.max(...rx, ...tx) || 1, m);
             const W = Math.max(300, el.clientWidth || 600), H = 230, L = 44, R = 6, Tp = 6, B = 22;
             const ph = (H - Tp - B), half = (ph - 2) / 2, base = Tp + half + 1;
@@ -7096,7 +7076,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (h) return short ? `${h} h${m ? ' ' + m + ' m' : ''}` : `${h} h ${m} m`;
             return short || !sec ? `${m} m` : `${m} m ${sec} s`;
         }
-        function tgsFmt(v) { return tgs.metric === 'calls' ? Math.round(v).toLocaleString('de-DE') : tgsFmtDur(v, true); }
+        function tgsFmt(v) { return tgs.metric === 'calls' ? Math.round(v).toLocaleString(N8Kit.locale()) : tgsFmtDur(v, true); }
         function tgsLabel(t) { return t.tg == null ? t.name : `TG ${t.tg}`; }
 
         function tgsAssignColors(series) {
@@ -7191,10 +7171,10 @@ PROTO_VER: ${fd ? 5 : 1}`;
             if (!d) return;
             tgsAssignColors(d.series || []);
             const T = d.totals || {};
-            document.getElementById('tgsKTgs').textContent = (T.talkgroups || 0).toLocaleString('de-DE');
-            document.getElementById('tgsKCalls').textContent = (T.calls || 0).toLocaleString('de-DE');
+            document.getElementById('tgsKTgs').textContent = (T.talkgroups || 0).toLocaleString(N8Kit.locale());
+            document.getElementById('tgsKCalls').textContent = (T.calls || 0).toLocaleString(N8Kit.locale());
             document.getElementById('tgsKDur').textContent = tgsFmtDur(T.duration || 0, true);
-            document.getElementById('tgsKUsers').textContent = (T.users || 0).toLocaleString('de-DE');
+            document.getElementById('tgsKUsers').textContent = (T.users || 0).toLocaleString(N8Kit.locale());
             document.getElementById('tgStatsCount').textContent = T.talkgroups ? `${T.talkgroups}` : '';
             renderTgBars(d);
             renderTgTime(d);
@@ -7213,8 +7193,8 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const list = tgs.taAll ? rows : rows.slice(0, 10);
             tb.innerHTML = list.map(r => {
                 const ids = (r.ids || []).map((id, i) => idLink(id, `${escapeHtml(String(id))}${r.callsigns && r.callsigns[i] ? `&nbsp;<span style="color:var(--text-dim)">${escapeHtml(r.callsigns[i])}</span>` : ''}`)).join(', ');
-                const last = r.last ? new Date(r.last * 1000).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
-                return `<tr><td><b>${escapeHtml(r.alias)}</b> <span class="ta-tag">TA</span></td><td class="num">${r.calls.toLocaleString('de-DE')}</td>`
+                const last = r.last ? new Date(r.last * 1000).toLocaleString(N8Kit.locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
+                return `<tr><td><b>${escapeHtml(r.alias)}</b> <span class="ta-tag">TA</span></td><td class="num">${r.calls.toLocaleString(N8Kit.locale())}</td>`
                     + `<td class="num">${tgsFmtDur(r.duration, true)}</td><td class="hide-sm">${ids || '–'}</td>`
                     + `<td class="hide-sm">${(r.talkgroups || []).map(t => `TG${t}`).join(', ')}</td><td class="hide-sm">${last}</td></tr>`;
             }).join('');
@@ -7273,7 +7253,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
             el.querySelectorAll('.tgs-hit').forEach(g => {
                 const r = rows[+g.dataset.i];
                 g.addEventListener('mousemove', ev => tgsTip(ev, `<b>TG ${r.tg}${r.name ? ' · ' + escapeHtml(r.name) : ''}</b>`
-                    + tgsRow(null, 'Airtime', tgsFmtDur(r.duration)) + tgsRow(null, 'Calls', r.calls.toLocaleString('de-DE'))
+                    + tgsRow(null, 'Airtime', tgsFmtDur(r.duration)) + tgsRow(null, 'Calls', r.calls.toLocaleString(N8Kit.locale()))
                     + tgsRow(null, 'Speakers', r.users) + tgsRow(null, 'Share', Math.round(r.share * 100) + ' %')));
                 g.addEventListener('mouseleave', tgsHide);
             });
@@ -7283,10 +7263,10 @@ PROTO_VER: ${fd ? 5 : 1}`;
             const t = new Date(d.buckets[i] * 1000);
             if (d.bucket === 'hour') {
                 const h = String(t.getHours()).padStart(2, '0');
-                return long ? `${t.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${h}:00–${String((t.getHours() + 1) % 24).padStart(2, '0')}:00` : h;
+                return long ? `${t.toLocaleDateString(N8Kit.locale(), { weekday: 'short', day: '2-digit', month: '2-digit' })} ${h}:00–${String((t.getHours() + 1) % 24).padStart(2, '0')}:00` : h;
             }
-            return long ? t.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' })
-                        : t.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }).replace(/\.$/, '');
+            return long ? t.toLocaleDateString(N8Kit.locale(), { weekday: 'long', day: '2-digit', month: '2-digit' })
+                        : t.toLocaleDateString(N8Kit.locale(), { day: '2-digit', month: '2-digit' }).replace(/\.$/, '');
         }
 
         function tgsNiceMax(v, metric) {
@@ -7364,10 +7344,10 @@ PROTO_VER: ${fd ? 5 : 1}`;
             tb.innerHTML = list.map(r => {
                 const tt = r.top_talker;
                 const talker = tt ? `${tt.alias ? `${escapeHtml(tt.alias)} <span class="ta-tag">TA</span>` : escapeHtml(tt.callsign || String(tt.id))} <span style="color:var(--text-dim)">· ${tgsFmtDur(tt.duration, true)}</span>` : '–';
-                const last = r.last ? new Date(r.last * 1000).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
+                const last = r.last ? new Date(r.last * 1000).toLocaleString(N8Kit.locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
                 const ob = r.obp_share >= 0.05 ? `<span class="obp-badge" title="Share of the airtime that came in over OpenBridge">↔ ${Math.round(r.obp_share * 100)} %</span>` : '';
                 return `<tr><td><span class="tgs-tg"><i style="background:${tgsColor(r.tg)}"></i>${r.tg}</span>${r.name ? ` <span style="color:var(--text-dim)">${escapeHtml(r.name)}</span>` : ''}${ob}</td>`
-                    + `<td class="num">${r.calls.toLocaleString('de-DE')}</td><td class="num">${tgsFmtDur(r.duration, true)}</td>`
+                    + `<td class="num">${r.calls.toLocaleString(N8Kit.locale())}</td><td class="num">${tgsFmtDur(r.duration, true)}</td>`
                     + `<td class="hide-sm"><span class="tgs-share"><span class="bar"><div style="width:${(r.share / maxShare) * 100}%"></div></span>${Math.round(r.share * 100)} %</span></td>`
                     + `<td class="num hide-sm">${r.users}</td><td class="hide-sm">${talker}</td><td class="hide-sm">${last}</td></tr>`;
             }).join('');
@@ -7701,7 +7681,7 @@ PROTO_VER: ${fd ? 5 : 1}`;
         // ---------- Footer: version and date ----------
         function fmtDay(iso) {
             const d = iso ? new Date(iso) : null;
-            return d && !isNaN(d) ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+            return d && !isNaN(d) ? d.toLocaleDateString(N8Kit.locale(), { day: '2-digit', month: 'short', year: 'numeric' }) : '';
         }
         async function loadVersion() {
             document.getElementById('footerYear').textContent = new Date().getFullYear();
