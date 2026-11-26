@@ -87,7 +87,7 @@ darauf hin. Die vollständigen Voraussetzungen stehen unter [Backup und Klonen](
 
 <p align="center"><img src="../images/setup-2.png" alt="setup.sh – Schritte 6 bis 9" width="80%"></p>
 
-Danach öffnest du das Dashboard (`http://dein-server:8080` bzw. `https://deine-domain`) und meldest dich oben rechts mit **🔐 Login** als Superadmin an. Alles Weitere stellst du im [Adminbereich](adminbereich.md) ein.
+Danach öffnest du das Dashboard (`http://dein-server:8080` bzw. `https://deine-domain`) und meldest dich oben rechts mit **🔐 Anmelden** als Superadmin an. Alles Weitere stellst du im [Adminbereich](adminbereich.md) ein.
 
 ### Das Skript erneut ausführen
 

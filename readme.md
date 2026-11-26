@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="#schnellstart">Schnellstart</a> ·
+  🌍 <a href="docs/anleitung/README.md"><b>Schritt für Schritt</b> (9 Sprachen)</a> · 
   <a href="docs/de/installation.md">Installation</a> ·
   <a href="docs/de/dashboard.md">Dashboard</a> ·
   <a href="docs/de/adminbereich.md">Adminbereich</a> ·
@@ -79,7 +80,7 @@ Das Installationsskript führt durch alle Einstellungen. Jede Frage hat eine Vor
   <img src="docs/images/setup-2.png" alt="Geführte Installation – Abschluss" width="49%">
 </p>
 
-➡️ Ausführlich: **[Installation](docs/de/installation.md)**
+➡️ Ausführlich: **[Installation](docs/de/installation.md)** · 🌍 **[Schritt für Schritt (9 Sprachen)](docs/anleitung/README.md)**
 
 ## So sieht es aus
 

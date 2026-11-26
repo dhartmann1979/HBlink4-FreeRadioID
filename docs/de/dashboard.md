@@ -41,7 +41,7 @@ Nach dem Login wird **⚙️ Admin** ein eigener Menüpunkt (gestrichelt umrande
 | **⚙️ Admin** | nach dem Login als Admin; öffnet den [Adminbereich](adminbereich.md) |
 | **🌐 DE ▾** | Sprache der Oberfläche – neun Sprachen (Deutsch, English, Français, Français (Belgique), Magyar, Svenska, Nederlands, Italiano, Español). Beim ersten Besuch die Sprache des Browsers, sonst **Deutsch**; die Wahl gilt sofort (ohne Neuladen) und für alle N8schicht-Seiten auf demselben Server (Cookie `n8_lang`), also auch für die APRS-Karte, adn-frn-server, N8-HotSpot und N8 Crosslink. Mehr in [Sicherheit & N8 Kit](sicherheit.md#sprache--neun-sprachen) |
 | **🔗 Links** | eigenes Link-Menü, wenn im [Adminbereich](adminbereich.md#-links) eingerichtet; alternativ als Knopfreihe unter der Kopfzeile |
-| **🔐 Login** bzw. Avatar + Name, **⏻** | Anmelden; angemeldet: Klick auf den Namen ändert das Passwort, ⏻ meldet ab |
+| **🔐 Anmelden** bzw. **Avatar + Name ▾** | Anmelden im [Anmeldefenster](sicherheit.md#anmeldung); angemeldet öffnet der Name ein Menü mit Rolle, 🔑 Passwort ändern, ⚙️ Adminbereich und ⏻ Abmelden |
 
 **Statusleiste** – der farbige Punkt sagt den Zustand: grün = verbunden, gelb = wartet, rot = Verbindung weg.
 

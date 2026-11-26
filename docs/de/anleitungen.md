@@ -4,7 +4,7 @@
 
 ---
 
-Schritt für Schritt durch die häufigsten Aufgaben. Für alles im Adminbereich gilt: ganz rechts **🔐 Login**, dann im Menü **⚙️ Admin**.
+Schritt für Schritt durch die häufigsten Aufgaben. Für alles im Adminbereich gilt: ganz rechts **🔐 Anmelden**, dann im Menü **⚙️ Admin** (oder im Benutzermenü **Name ▾ → Adminbereich**).
 
 | Anleitung | Für |
 |---|---|

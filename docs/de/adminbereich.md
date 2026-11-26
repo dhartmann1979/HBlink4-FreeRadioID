@@ -14,7 +14,7 @@ Im Adminbereich stellst du **Dashboard und DMR-Server** ein, ohne SSH und ohne C
   <img src="../images/header-login.png" alt="Kopfzeile nach dem Login" width="62%">
 </p>
 
-**🔐 Login** ganz rechts in der Kopfzeile. Danach erscheint im Menü der Punkt **⚙️ Admin**; rechts stehen dein Name (Passwort ändern) und **⏻** zum Abmelden. Mit *Angemeldet bleiben* gilt die Anmeldung 30 Tage, sonst 12 Stunden; beides ist einstellbar. Nach 5 Fehlversuchen ist der Login für 15 Minuten gesperrt.
+**🔐 Anmelden** ganz rechts in der Kopfzeile. Danach erscheint im Menü der Punkt **⚙️ Admin**; rechts steht **Avatar + Name ▾** mit Passwort ändern, Adminbereich und Abmelden. Mit *Angemeldet bleiben* gilt die Anmeldung 30 Tage, sonst 12 Stunden; beides ist einstellbar. Nach 5 Fehlversuchen ist der Login für 15 Minuten gesperrt.
 
 ## Rollen
 
