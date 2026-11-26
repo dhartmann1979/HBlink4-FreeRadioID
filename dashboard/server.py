@@ -54,6 +54,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="DMR Die N8schicht Dashboard", version="1.6.2", **_sec.FASTAPI_KWARGS)
+# N8 Guard: request budget per IP (flooding), websocket limit, body size – the same in every N8 system
+from .n8_guard import Guard as _N8Guard  # noqa: E402
+app.add_middleware(_N8Guard, api_per_min=1200, page_per_min=600, auth_per_min=30, max_body=256 * 1024 * 1024)
 
 # Load dashboard configuration
 def load_config() -> dict:

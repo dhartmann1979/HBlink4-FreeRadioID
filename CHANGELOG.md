@@ -4,6 +4,20 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.17.0] – 2026-11-26
+
+### 🔐 Sicherheits-Update
+Prüfung aller N8-Portale auf Sicherheitslücken, Fehler, Flooding, Brute-Force und Hintertüren. Hintertüren wurden keine gefunden; Login-Sperre,
+CSRF-Header und die Verbindungsgrenzen der APRS-Schnittstelle waren schon vorhanden. Neu:
+
+- **N8 Guard gegen Flooding** – neuer, in allen N8-Systemen gleicher Wächter vor dem Dashboard (`n8_guard.py`, Version 1.0.0):
+  Anfragen-Budget je IP-Adresse (API 1200/min, Seiten 600/min, Anmeldung 30/min, WebSocket 60 neue/min und höchstens 24 gleichzeitig),
+  darüber `429 Too Many Requests` mit `Retry-After`; zu große Anfragen werden mit `413` abgewiesen, bevor sie gelesen werden (Grenze 256 MB, damit große Backups weiter hochgeladen werden können).
+  Statische Dateien und die Let's-Encrypt-Prüfung zählen nicht mit. Der Speicher für die Zähler ist begrenzt (höchstens 20 000 IPs),
+  damit ein Angriff mit vielen Adressen den Server nicht vollschreibt.
+- Tests: Prüfungen für den N8 Guard.
+- Doku: [Sicherheit](docs/de/sicherheit.md) um den N8 Guard ergänzt.
+
 ## [1.16.1] – 2026-11-26
 
 ### Behoben
