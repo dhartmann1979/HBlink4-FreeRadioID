@@ -4,6 +4,19 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.16.1] – 2026-11-26
+
+### Behoben
+- **APRS-Karte wurde beim nahen Heranzoomen dunkel:** Die Karte ließ bis Zoomstufe 19 zu, die topografische Karte (OpenTopoMap) liefert
+  aber nur Kacheln bis Stufe 17 – darüber blieb die Fläche leer und erschien dunkel, egal wo. Jetzt kennt die Karte die letzte Stufe jedes
+  Kartenservers (OpenStreetMap 19, OpenTopoMap 17) und **vergrößert darüber die letzten Kacheln**, statt nichts zu zeigen. Heranzoomen geht
+  jetzt überall bis Stufe 20.
+- Für einen **eigenen Kachelserver** gibt es die neue Einstellung *Höchste Zoomstufe des eigenen Kachelservers* (APRS → Karte, erweitert,
+  Standard 18).
+
+### Wichtig beim Update
+- Nichts zu tun – die Karte im Browser einmal neu laden.
+
 ## [1.16.0] – 2026-11-25
 
 ### 🔤 Schriftauswahl mit Vorschau – in allen N8-Systemen (N8 Theme 2.1)
