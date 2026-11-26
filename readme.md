@@ -130,7 +130,7 @@ Das Installationsskript führt durch alle Einstellungen. Jede Frage hat eine Vor
 | 💾 [Backup und Klonen](docs/de/backup.md) | Vollständige Sicherung, Download, Archivprüfung und Wiederherstellung auf einem anderen HBlink4-Server; [verschlüsselte AutoBackups](docs/de/autobackup.md) nach SFTP/Google Drive |
 | 🧾 [Konfiguration](docs/de/konfiguration.md) | Was in den Dateien steht und was in SQLite, alle Einstellungen im Überblick, Patterns |
 | 🛡️ [FreeRadioID](docs/de/freeradioid.md) | Secure Login, Gastzugang, Avatare, Profile, ID-Listen |
-| 🔐 [Sicherheit & N8 Kit](docs/de/sicherheit.md) | Sicherheits-Header, API-Doku aus, Schutz vor XSS, Reverse-Proxy (Caddy/nginx), Sprache DE/EN, Updates mit Prüfung und Rollback |
+| 🔐 [Sicherheit & N8 Kit](docs/de/sicherheit.md) | Sicherheits-Header, API-Doku aus, Schutz vor XSS, Reverse-Proxy (Caddy/nginx), neun Sprachen, Anmeldefenster, Updates mit Prüfung und Rollback |
 | 🩺 [Betrieb & Fehlersuche](docs/de/betrieb.md) | Dienste, Keep-Alive, 💥 Abstürze (Teil, Ursache, Protokoll), `check.sh`, typische Fehlermeldungen, Sicherung, Aktualisieren |
 | 🏷️ [Versionen](docs/de/versionen.md) · [Änderungen](CHANGELOG.md) | Versionsnummer, was sich in welcher Version geändert hat, wie eine neue Version entsteht |
 

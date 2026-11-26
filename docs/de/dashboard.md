@@ -16,7 +16,7 @@ Das Dashboard zeigt live, was auf dem DMR-Server passiert. Es ist für Desktop u
 
 <p align="center"><img src="../images/header-desktop.png" alt="Kopfzeile mit Menü und Statusleiste" width="95%"></p>
 
-Oben gibt es nur noch **ein** Menü: links Logo und Titel, in der Mitte die Reiter, rechts 🔗 Links, der Sprachumschalter **DE | EN** und ganz rechts **🔐 Login**.
+Oben gibt es nur noch **ein** Menü: links Logo und Titel, in der Mitte die Reiter, rechts 🔗 Links, das Sprachmenü **🌐 DE ▾** (neun Sprachen) und ganz rechts **🔐 Anmelden** – angemeldet Avatar + Name ▾ mit Passwort ändern, Adminbereich und Abmelden.
 Direkt darunter hängt eine schmale **Statusleiste** – deutlich niedriger als das Menü –, die nur zeigt, wie es den Diensten geht.
 Beides bleibt beim Scrollen oben stehen, du wechselst also von überall die Ansicht.
 
@@ -39,7 +39,7 @@ Nach dem Login wird **⚙️ Admin** ein eigener Menüpunkt (gestrichelt umrande
 | Logo, Titel, Untertitel, Farben | einstellbar im Adminbereich unter [🎨 Appearance](adminbereich.md#-appearance) |
 | **Reiter** | 🎙️ Live · 📈 Statistics · ↔️ OpenBridge · 🗂️ Talkgroups · 🗺️ APRS · 🛠️ Configuration (OpenBridge und APRS nur, wenn eingerichtet) |
 | **⚙️ Admin** | nach dem Login als Admin; öffnet den [Adminbereich](adminbereich.md) |
-| **DE \| EN** | Sprache der Oberfläche. Standard ist **Deutsch**; die Wahl gilt sofort (ohne Neuladen) und für alle N8schicht-Seiten auf demselben Server (Cookie `n8_lang`), also auch für die APRS-Karte, adn-frn-server, N8-HotSpot und N8 Crosslink. Mehr in [Sicherheit & N8 Kit](sicherheit.md#sprache-de--en) |
+| **🌐 DE ▾** | Sprache der Oberfläche – neun Sprachen (Deutsch, English, Français, Français (Belgique), Magyar, Svenska, Nederlands, Italiano, Español). Beim ersten Besuch die Sprache des Browsers, sonst **Deutsch**; die Wahl gilt sofort (ohne Neuladen) und für alle N8schicht-Seiten auf demselben Server (Cookie `n8_lang`), also auch für die APRS-Karte, adn-frn-server, N8-HotSpot und N8 Crosslink. Mehr in [Sicherheit & N8 Kit](sicherheit.md#sprache--neun-sprachen) |
 | **🔗 Links** | eigenes Link-Menü, wenn im [Adminbereich](adminbereich.md#-links) eingerichtet; alternativ als Knopfreihe unter der Kopfzeile |
 | **🔐 Login** bzw. Avatar + Name, **⏻** | Anmelden; angemeldet: Klick auf den Namen ändert das Passwort, ⏻ meldet ab |
 

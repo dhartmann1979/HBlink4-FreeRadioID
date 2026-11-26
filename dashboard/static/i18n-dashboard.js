@@ -359,3 +359,19 @@ N8Kit.i18n.add({
     rules: [[/^AutoBackup vorbereiten: (.+)$/, 'Prepare AutoBackup: $1'], [/^Backup-Datei \(\.tar\.gz oder \.tar\.gz\.age, maximal (.+)\)$/, 'Backup file (.tar.gz or .tar.gz.age, at most $1)'],
             [/^Backup erstellt \((.+)\)\. Download wird gestartet\.$/, 'Backup created ($1). Download starts.']],
 });
+
+/* 1.6: texts found without translation by the language scan */
+N8Kit.i18n.add({
+    base: 'en',
+    de: {
+        "No users heard yet": "Noch niemand gehört",
+        "DMR Server: Dashboard is not connected to the DMR server": "DMR-Server: Das Dashboard ist nicht mit dem DMR-Server verbunden",
+        "Logins verified by FreeRadioID.net / guest logins on the default passphrase": "Von FreeRadioID.net bestätigte Anmeldungen / Gast-Anmeldungen mit der Standard-Passphrase",
+        "No group calls in this period yet.": "In diesem Zeitraum noch keine Gruppenrufe.",
+        "names sent by the radios": "Namen von den Funkgeräten",
+        "No Talker Alias received in this period.": "In diesem Zeitraum kein Talker Alias empfangen.",
+    },
+    rules: [
+        [/^Callsign DB: ([\d.,]+) entries \+ ([\d.,]+) FreeRadioID, updated (.+)$/, "Rufzeichen-DB: $1 Einträge + $2 FreeRadioID, Stand $3"],
+    ]
+});
