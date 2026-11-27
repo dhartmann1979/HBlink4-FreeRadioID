@@ -42,6 +42,7 @@ from .talkgroups import Talkgroups
 from . import version as _version
 from . import siteicons as _siteicons
 from . import n8_security as _sec
+from . import n8feed as _n8feed
 from .n8_admin import N8Admin as _N8Admin, own_unit
 from . import backup as _backup
 from . import autobackup as _autobackup
@@ -1301,7 +1302,9 @@ async def _auth_error_handler(request: Request, exc: AuthError):
 @app.middleware("http")
 async def _security_middleware(request: Request, call_next):
     path = request.url.path
-    if path.startswith("/api/"):
+    if path == _n8feed.PATH:
+        pass            # 📰 portal feed of the adn-frn-server: its own encryption with the sync key, no session
+    elif path.startswith("/api/"):
         # CSRF: state-changing calls must come from our own page (custom header +
         # SameSite=Strict cookie).
         if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.headers.get("x-dashboard") != "1":
@@ -2885,6 +2888,49 @@ def _connect_daprs(d: dict) -> Optional[dict]:
         "guests_local": bool(a.c("daprs.block_guests", True)),
         "map_url": map_url,
     }
+
+
+# ---------------------------------------------------------------- 📰 portal feed for the adn-frn-server (dashboard/n8feed.py)
+_feed_replay = _n8feed.Replay()
+
+
+def _feed_summary() -> dict:
+    """What the portal page of the adn-frn-server shows as a widget: no IPs, only what the public page shows too."""
+    reps = [r for r in state.repeaters.values() if r.get("status") == "connected"]
+    obp = [o for o in state.openbridges.values() if str(o.get("status", "")).lower() in ("connected", "up", "ok", "active")]
+    air = []
+    for st in state.streams.values():
+        if st.get("status") != "active" or st.get("is_assumed"):
+            continue
+        rid = st.get("repeater_id")
+        where = (state.repeaters.get(rid, {}) or {}).get("callsign") or st.get("connection_name") or ""
+        air.append({"call": st.get("callsign") or st.get("rf_src") or st.get("src_id"), "name": "",
+                    "where": f"TG {st.get('dst_id', '')} · TS{st.get('slot', '')}" + (f" · {where}" if where else "")})
+    lh = [{"call": u.get("callsign") or u.get("radio_id"), "name": "",
+           "where": f"TG {u.get('talkgroup', '')} · {u.get('source_name', '')}".strip(" ·"), "ts": u.get("last_heard"),
+           "duration": u.get("duration") or 0} for u in state.last_heard[:8]]
+    ok = bool(state.hblink_connected)
+    v = _version.local_version()
+    return _n8feed.summary(
+        "hblink4", dashboard_config.get("dashboard_title") or "HBlink4", v.get("version") or "",
+        "ok" if ok else "down", "" if ok else "DMR server not connected",
+        [("Repeaters & hotspots", len(reps)), ("Talking now", len(air)),
+         ("Calls today", state.stats.get("total_calls_today", 0)), ("Airtime today", _n8feed.fmt_dur(state.stats.get("total_duration_today", 0)))]
+        + ([("OpenBridge", len(obp))] if state.openbridges else []), air, lh)
+
+
+@app.post(_n8feed.PATH)
+async def n8_portal_feed(request: Request):
+    """📰 Live summary for the portal page of the adn-frn-server – encrypted with the sync key (Settings → Dashboard access)."""
+    pf = dashboard_config.get("portal_feed") or {}
+    key = str(pf.get("key") or "") if pf.get("enabled") else ""
+    raw = await request.body()
+    try:
+        blob = await asyncio.to_thread(_n8feed.answer_request, raw, key, _feed_replay, _feed_summary)
+    except _n8feed.FeedError as e:
+        await asyncio.sleep(1.0)                   # slows down guessing
+        return JSONResponse({"error": str(e)}, status_code=403 if key else 404)
+    return Response(blob, media_type=_n8feed.CTYPE)
 
 
 @app.get("/api/stats")

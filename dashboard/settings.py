@@ -138,6 +138,11 @@ DASH_FIELDS: List[Field] = [
           "Off = nothing is visible without login. IP addresses and ports are always admin-only."),
     Field("auth.session_hours", "access", "Session length (hours)", "int", 12, min=1, max=720),
     Field("auth.remember_days", "access", "\"Stay logged in\" (days)", "int", 30, min=1, max=365),
+    Field("portal_feed.enabled", "access", "Live data for the ADN portal page", "bool", False,
+          "The portal page of the adn-frn-server shows the live data of this server as a widget (status, talking now, last heard) – "
+          "encrypted with the sync key, without IPs"),
+    Field("portal_feed.key", "access", "Sync key for the ADN portal page", "password", "",
+          "Copy it from the portal (adn-frn-server: 📰 Portal → 🧩 Widgets → 🎲 New key) – at least 24 characters", depends="portal_feed.enabled"),
 
     Field("freeradioid.avatars", "freeradioid", "Show avatars", "bool", True,
           "Images of FreeRadioID-registered IDs, cached in the database"),
