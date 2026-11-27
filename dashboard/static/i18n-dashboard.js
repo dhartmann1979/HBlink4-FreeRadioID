@@ -375,3 +375,16 @@ N8Kit.i18n.add({
         [/^Callsign DB: ([\d.,]+) entries \+ ([\d.,]+) FreeRadioID, updated (.+)$/, "Rufzeichen-DB: $1 Einträge + $2 FreeRadioID, Stand $3"],
     ]
 });
+
+/* 1.19.0: portal feed for the adn-frn-server */
+N8Kit.i18n.add({
+    base: 'en',
+    de: {
+        "Live data for the ADN portal page": "Live-Daten für die Portal-Seite des ADN FRN Servers",
+        "The portal page of the adn-frn-server shows the live data of this server as a widget (status, talking now, last heard) – encrypted with the sync key, without IPs":
+            "Die Portal-Seite des adn-frn-server zeigt die Live-Daten dieses Servers als Widget (Status, wer gerade spricht, zuletzt gehört) – verschlüsselt mit dem Sync-Schlüssel, ohne IP-Adressen",
+        "Sync key for the ADN portal page": "Sync-Schlüssel für die Portal-Seite",
+        "Copy it from the portal (adn-frn-server: 📰 Portal → 🧩 Widgets → 🎲 New key) – at least 24 characters":
+            "Aus dem Portal kopieren (adn-frn-server: 📰 Portal → 🧩 Widgets → 🎲 Neuer Schlüssel) – mindestens 24 Zeichen",
+    },
+});

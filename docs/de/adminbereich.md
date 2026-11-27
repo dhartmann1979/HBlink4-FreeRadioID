@@ -99,6 +99,21 @@ Die **Talkgroup-Namen** gelten für die Statistik, den Tab *Configuration* und d
 
 <p align="center"><img src="../images/admin-settings-connect.png" alt="Abschnitt Configuration tab" width="72%"></p>
 
+### 📰 Live-Daten für die Portal-Seite des ADN FRN Servers
+
+Ab **1.19.0** kann die Portal-Seite eines [adn-frn-server](https://github.com/dhartmann1979/adn-frn-server/blob/main/docs/de/portal.md#-widgets-am-rand-live-daten-der-anderen-n8-systeme) die Live-Daten dieses Servers als **Widget am Rand** zeigen:
+Status, Repeater & Hotspots, wer gerade spricht (TG, Zeitschlitz, Repeater), Durchgänge und Sprechzeit heute und zuletzt gehört.
+
+1. Im adn-frn-server: *📰 Portal → 🧩 Widgets → ＋ HBlink4 DMR*, Adresse dieses Dashboards eintragen, **🎲 Neuer Schlüssel**, kopieren.
+2. Hier: *Einstellungen → 🔐 Zugang zum Dashboard* → **Live-Daten für die Portal-Seite** an, **Sync-Schlüssel für die Portal-Seite**
+   einfügen, speichern.
+3. Im Portal speichern – es ruft sofort ab und meldet „✅ Live-Daten empfangen“.
+
+- Der Abruf (`POST /api/n8/feed`) ist **mit dem Sync-Schlüssel verschlüsselt** (scrypt, SHAKE-256, HMAC-SHA-256; jede Anfrage nur einmal und
+  höchstens 5 Minuten gültig) und braucht keine Anmeldung – auch wenn das Dashboard privat ist. Ohne den Schlüssel bekommt niemand etwas.
+- Geschickt wird nur, was die öffentliche Seite zeigt – **keine IP-Adressen, keine Ports, keine Konten**.
+- Aus = Schalter aus (Standard). Die Datei `dashboard/n8feed.py` ist in allen N8-Systemen gleich.
+
 ### 🛰️ DMR-Server (HBlink4)
 
 <p align="center"><img src="../images/admin-settings-dmr.png" alt="🛰️ DMR-Server im Baum-Menü" width="90%"></p>

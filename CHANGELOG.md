@@ -4,6 +4,22 @@ Alle Versionen von **HBlink4-FreeRadioID** (DMR Die N8schicht), die neueste oben
 Die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`.
 Wie Versionen entstehen, steht in [docs/de/versionen.md](docs/de/versionen.md).
 
+## [1.19.0] – 2026-11-27
+
+### 📰 Live-Daten für die Portal-Seite des ADN FRN Servers
+
+- **Neu: Portal-Feed.** Die Portal-Seite eines adn-frn-server (ab 2.33.0) zeigt diesen DMR-Server als **Widget am Rand**: Status (DMR-Server
+  verbunden?), Repeater & Hotspots, wer gerade spricht (TG, Zeitschlitz, Repeater bzw. Verbindung), Durchgänge und Sprechzeit heute,
+  OpenBridge-Trunks und zuletzt gehört.
+- Einstellung unter **Einstellungen → 🔐 Zugang zum Dashboard**: *Live-Daten für die Portal-Seite* (Standard aus) und *Sync-Schlüssel für die
+  Portal-Seite* (kommt aus dem Portal: 📰 Portal → 🧩 Widgets → 🎲 Neuer Schlüssel).
+- Neuer Endpunkt `POST /api/n8/feed`: **Ende-zu-Ende verschlüsselt mit dem Sync-Schlüssel** (wie Master & Backup beim adn-frn-server: scrypt,
+  SHAKE-256, HMAC-SHA-256), jede Anfrage nur einmal und höchstens 5 Minuten gültig, falsche Versuche werden gebremst. Er braucht keine
+  Anmeldung und funktioniert auch bei privatem Dashboard – ohne den Schlüssel liefert er nichts.
+- Es geht nur hinaus, was die öffentliche Live-Seite zeigt: **keine IP-Adressen, keine Ports, keine Konten**.
+- Neue Datei `dashboard/n8feed.py` (in allen N8-Systemen gleich, nur Standardbibliothek). Tests: `tests/test_portal_feed.py`.
+- Doku: [docs/de/adminbereich.md](docs/de/adminbereich.md) Abschnitt „📰 Live-Daten für die Portal-Seite“.
+
 ## [1.18.1] – 2026-11-26
 
 ### 📘 Neue Schritt-für-Schritt-Anleitung in neun Sprachen, bereinigte Doku
